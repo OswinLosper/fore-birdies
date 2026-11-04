@@ -27,6 +27,12 @@ export default function Setup({ courses, onTeeOff, onCancel }) {
     pars[i] = pars[i] >= 5 ? 3 : pars[i] + 1;
     set({ pars });
   }
+  // Tapping the selected course again clears it, back to a blank 18-hole course.
+  function pickCourse(c) {
+    if (d.courseId === c.id) set({ courseId: null, course: '', pars: fill(18, 4) });
+    else set({ courseId: c.id, course: c.name, pars: c.pars.slice() });
+    setError('');
+  }
   function setPlayer(i, v) {
     const players = d.players.slice(); players[i] = v; set({ players });
   }
@@ -45,11 +51,11 @@ export default function Setup({ courses, onTeeOff, onCancel }) {
         <h1>New round</h1>
         {courses.length > 0 && (
           <div className="stack">
-            <p className="hint">Saved courses</p>
+            <p className="hint">{d.courseId ? 'Saved courses. Tap it again to start a new course instead.' : 'Saved courses'}</p>
             <div className="chips">
               {courses.map((c) => (
                 <button key={c.id} className="chip" type="button" aria-pressed={d.courseId === c.id}
-                  onClick={() => { set({ courseId: c.id, course: c.name, pars: c.pars.slice() }); setError(''); }}>
+                  onClick={() => pickCourse(c)}>
                   {c.name}
                 </button>
               ))}
