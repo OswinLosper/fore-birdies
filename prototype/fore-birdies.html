@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fore Birdies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@500;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F3F6F1; --surface:#FFFFFF; --ink:#1C2A21; --muted:#4E5F54; --line:#D5DED6;
+  --green:#1F5D3A; --green-ink:#FFFFFF; --green-soft:#E3EEE6; --yellow:#F2C230; --yellow-ink:#1C2A21;
+  --coral:#B5452A; --focus:#2F6FD6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0F1A14; --surface:#17251C; --ink:#EAF1EC; --muted:#A9BBAF; --line:#2B3B31;
+    --green:#2F7D50; --green-ink:#FFFFFF; --green-soft:#1E3327; --yellow:#F2C230; --yellow-ink:#1C2A21;
+    --coral:#F08A6C; --focus:#7FB0FF;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0F1A14; --surface:#17251C; --ink:#EAF1EC; --muted:#A9BBAF; --line:#2B3B31;
+  --green:#2F7D50; --green-ink:#FFFFFF; --green-soft:#1E3327; --yellow:#F2C230; --yellow-ink:#1C2A21;
+  --coral:#F08A6C; --focus:#7FB0FF;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:17px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:520px;margin:0 auto;padding:16px 18px 32px}
+.bar{display:flex;align-items:center;gap:10px;padding:6px 0 18px}
+.bar svg{flex:none}
+.brand{font-family:'Fredoka',system-ui,sans-serif;font-weight:600;font-size:24px;color:var(--green);margin:0}
+:root[data-theme="dark"] .brand{color:var(--ink)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .brand{color:var(--ink)}}
+h1,h2{font-family:'Fredoka',system-ui,sans-serif;font-weight:600;margin:0;line-height:1.1}
+h1{font-size:34px}
+h2{font-size:22px;margin-bottom:10px}
+p{margin:0}
+.muted{color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:14px}
+.section{margin-top:26px}
+.btn{min-height:52px;border-radius:26px;border:none;padding:0 22px;font-weight:800;font-size:17px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn-primary{background:var(--green);color:var(--green-ink)}
+.btn-accent{background:var(--yellow);color:var(--yellow-ink)}
+.btn-ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn-text{background:none;border:none;color:var(--muted);font-weight:700;min-height:44px;padding:0 8px;cursor:pointer}
+.btn-block{width:100%}
+.hero{background:var(--green);color:#FFFFFF;border-radius:28px;padding:24px 22px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.hero h1{color:#FFFFFF}
+.hero p{color:#D9EADF}
+.hero .mascot{position:absolute;right:-18px;top:-10px;width:130px;height:130px;opacity:.95}
+.hero-text{max-width:70%}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;cursor:pointer;min-height:64px}
+.item strong{display:block;font-size:17px}
+.item small{color:var(--muted);font-size:14px}
+.pill{font-size:13px;font-weight:800;border-radius:12px;padding:4px 10px;background:var(--green-soft);color:var(--ink);white-space:nowrap}
+.pill.live{background:var(--yellow);color:var(--yellow-ink)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px}
+label.field{display:flex;flex-direction:column;gap:6px;font-weight:700}
+input[type=text]{height:50px;border-radius:14px;border:2px solid var(--line);background:var(--surface);padding:0 14px;width:100%}
+input[type=text]:focus{border-color:var(--green)}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:var(--green-soft);padding:5px;border-radius:18px}
+.seg button{min-height:44px;border:none;border-radius:14px;background:transparent;font-weight:800;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 0 var(--line)}
+.pars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.par{min-height:56px;border-radius:12px;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:4px 0}
+.par span{font-size:12px;color:var(--muted);font-weight:700}
+.par b{font-size:19px}
+.par[data-par="3"]{border-color:#7FBF98}
+.par[data-par="5"]{border-color:var(--yellow)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;border-radius:22px;border:2px solid var(--line);background:var(--surface);padding:0 16px;font-weight:700;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+.player-row{display:flex;gap:8px;align-items:center}
+.icon-btn{width:48px;height:48px;flex:none;border-radius:50%;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.error{color:var(--coral);font-weight:700}
+.hint{font-size:14px;color:var(--muted)}
+/* scorecard */
+.hole-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.hole-num{font-family:'Fredoka',system-ui,sans-serif;font-weight:600;font-size:56px;line-height:.9;color:var(--green)}
+:root[data-theme="dark"] .hole-num{color:var(--yellow)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hole-num{color:var(--yellow)}}
+.strip{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 8px;margin:14px -2px 4px;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.strip button{flex:none;width:40px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface);font-weight:800;cursor:pointer}
+.strip button.done{background:var(--green-soft)}
+.strip button[aria-current="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.prow{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:12px 12px 12px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+.pname{font-weight:800;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptotal{font-size:14px;color:var(--muted);font-weight:700}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:52px;height:52px;border-radius:50%;border:none;background:var(--green-soft);font-size:28px;font-weight:800;cursor:pointer;line-height:1}
+.score{width:48px;text-align:center;font-family:'Fredoka',system-ui,sans-serif;font-weight:600;font-size:34px}
+.tag{grid-column:1/-1;font-size:13px;font-weight:800;color:var(--muted);margin-top:-4px}
+.tag.good{color:var(--green)}
+:root[data-theme="dark"] .tag.good{color:var(--yellow)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tag.good{color:var(--yellow)}}
+.nav{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px;margin-top:20px}
+/* summary */
+.board{display:flex;flex-direction:column;gap:8px}
+.brow{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.brow.first{border:2px solid var(--yellow)}
+.rank{font-family:'Fredoka',system-ui,sans-serif;font-weight:600;font-size:22px;text-align:center}
+.bscore{font-weight:800;text-align:right}
+.bscore small{display:block;color:var(--muted);font-weight:700;font-size:13px}
+.table-box{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+table{border-collapse:collapse;font-size:14px;min-width:100%}
+th,td{padding:8px 10px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);font-weight:800}
+td.under{color:var(--green);font-weight:800}
+:root[data-theme="dark"] td.under{color:var(--yellow)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) td.under{color:var(--yellow)}}
+/* celebration */
+.celebrate{position:fixed;inset:0;z-index:50;background:#1F5D3A;color:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px));text-align:center}
+.celebrate[hidden]{display:none}
+.celebrate h2{font-size:60px;color:#F2C230;margin:0}
+.celebrate p{font-size:19px;font-weight:700;max-width:22em}
+.celebrate .mascot{width:200px;height:200px}
+.celebrate .btn{min-width:220px}
+@media (prefers-reduced-motion: no-preference){
+  .celebrate:not([hidden]) .mascot{animation:fly 1.2s ease-out}
+  @keyframes fly{from{transform:translate(-60vw,30px) rotate(-10deg)}to{transform:none}}
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<main class="wrap" id="app" aria-live="polite"></main>
+
+<div class="celebrate" id="celebrate" hidden role="dialog" aria-modal="true" aria-labelledby="celebrate-title">
+  <div class="mascot" id="celebrate-mascot"></div>
+  <h2 id="celebrate-title">Birdie!</h2>
+  <p id="celebrate-text"></p>
+  <button class="btn btn-accent" id="celebrate-close" type="button">Keep playing</button>
+</div>
+
+<script>
+(function(){
+  var KEY = 'fore-birdies-v1';
+  var MASCOT = '<svg viewBox="0 0 300 300" width="100%" height="100%" aria-hidden="true"><circle cx="150" cy="150" r="140" fill="#2B7449"/><g stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="6" stroke-linecap="round"><line x1="36" y1="128" x2="62" y2="128"/><line x1="28" y1="154" x2="58" y2="154"/><line x1="38" y1="180" x2="62" y2="180"/></g><circle cx="152" cy="152" r="84" fill="#FFFFFF"/><g fill="#D9E2DA"><circle cx="112" cy="112" r="7"/><circle cx="140" cy="100" r="7"/><circle cx="96" cy="140" r="7"/><circle cx="124" cy="132" r="7"/><circle cx="100" cy="170" r="7"/><circle cx="128" cy="196" r="7"/><circle cx="158" cy="210" r="7"/><circle cx="190" cy="198" r="7"/><circle cx="214" cy="170" r="7"/><circle cx="170" cy="96" r="7"/></g><path d="M118 160 Q140 128 186 140 Q176 182 132 186 Q118 178 118 160 Z" fill="#F2C230"/><path d="M140 150 Q156 146 170 150" fill="none" stroke="#C99A12" stroke-width="3" stroke-linecap="round"/><path d="M136 164 Q152 162 166 166" fill="none" stroke="#C99A12" stroke-width="3" stroke-linecap="round"/><circle cx="200" cy="118" r="11" fill="#143D26"/><circle cx="203" cy="114" r="3.5" fill="#FFFFFF"/><path d="M228 128 L262 140 L228 152 Z" fill="#FF7A59"/></svg>';
+  var FLAG = '<svg viewBox="0 0 300 300" width="38" height="38" aria-hidden="true"><rect width="300" height="300" rx="68" fill="#1F5D3A"/><ellipse cx="128" cy="238" rx="46" ry="10" fill="#143D26" fill-opacity="0.55"/><line x1="128" y1="236" x2="128" y2="104" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/><path d="M132 108 L214 130 L132 154 Z" fill="#F2C230"/><path d="M112 88 L94 78 L100 96 Z" fill="#FFFFFF"/><ellipse cx="124" cy="88" rx="22" ry="14" fill="#FFFFFF"/><circle cx="146" cy="74" r="12" fill="#FFFFFF"/><path d="M156 70 L170 75 L156 80 Z" fill="#F2C230"/><circle cx="149" cy="72" r="3" fill="#143D26"/></svg>';
+  var X_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+  var db = load();
+  var view = 'home', draft = null, roundId = null, error = '';
+  var app = document.getElementById('app');
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){ var d = JSON.parse(raw); return { courses: d.courses || [], rounds: d.rounds || [] }; }
+    }catch(e){}
+    return { courses: [], rounds: [] };
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function toPar(n){ return n === 0 ? 'E' : (n > 0 ? '+' + n : '\u2212' + Math.abs(n)); }
+  function getRound(id){ for(var i=0;i<db.rounds.length;i++){ if(db.rounds[i].id === id) return db.rounds[i]; } return null; }
+  function stats(r, p){
+    var strokes=0, diff=0, pts=0, played=0;
+    r.pars.forEach(function(par, h){
+      var s = r.scores[p][h];
+      if(s != null){ strokes += s; diff += s - par; pts += Math.max(0, 2 + par - s); played++; }
+    });
+    return { strokes: strokes, diff: diff, pts: pts, played: played };
+  }
+  function label(s, par){
+    if(s === 1) return 'Hole in one';
+    var d = s - par;
+    var names = { '-3':'Albatross', '-2':'Eagle', '-1':'Birdie', '0':'Par', '1':'Bogey', '2':'Double bogey', '3':'Triple bogey' };
+    if(names[d]) return names[d];
+    return d < -3 ? 'Unreal' : '+' + d;
+  }
+  function totalText(r, p){
+    var st = stats(r, p);
+    if(r.format === 'stableford') return st.pts + ' pts';
+    return st.played ? st.strokes + ' (' + toPar(st.diff) + ')' : '\u2013';
+  }
+  function fmtDate(t){ try{ return new Date(t).toLocaleDateString(undefined, { day:'numeric', month:'short' }); }catch(e){ return ''; } }
+
+  function go(v){ view = v; error = ''; render(); window.scrollTo(0,0); }
+
+  function header(){
+    return '<div class="bar">' + FLAG + '<p class="brand">Fore Birdies</p></div>';
+  }
+
+  /* ---------- home ---------- */
+  function renderHome(){
+    var rounds = db.rounds.slice().sort(function(a,b){ return b.date - a.date; });
+    var html = header() +
+      '<section class="hero"><div class="mascot">' + MASCOT + '</div>' +
+      '<div class="hero-text stack"><h1>Ready for a round?</h1><p>Keep score with your mates, hole by hole.</p></div>' +
+      '<button class="btn btn-accent" type="button" data-act="new">Start a round</button></section>' +
+      '<section class="section"><h2>Your rounds</h2>';
+    if(!rounds.length){
+      html += '<p class="muted">No rounds yet. Your rounds will show up here once you tee off.</p>';
+    } else {
+      html += '<div class="list">';
+      rounds.forEach(function(r){
+        var lead = r.players[0] ? esc(r.players[0]) + ': ' + esc(totalText(r, 0)) : '';
+        html += '<button class="item" type="button" data-act="open" data-id="' + r.id + '"><span><strong>' + esc(r.course) + '</strong><small>' + fmtDate(r.date) + ', ' + r.players.length + (r.players.length === 1 ? ' player' : ' players') + (lead ? ', ' + lead : '') + '</small></span>' +
+          (r.done ? '<span class="pill">Finished</span>' : '<span class="pill live">Hole ' + (r.hole + 1) + '</span>') + '</button>';
+      });
+      html += '</div>';
+    }
+    html += '</section>';
+    app.innerHTML = html;
+  }
+
+  /* ---------- setup ---------- */
+  function newDraft(){
+    var last = db.courses[db.courses.length - 1];
+    draft = { courseId: null, course: '', pars: fill(18, 4), format: 'stroke', players: ['You', ''] };
+    if(last){ /* keep blank; user can pick */ }
+  }
+  function fill(n, v){ var a=[]; for(var i=0;i<n;i++) a.push(v); return a; }
+
+  function renderSetup(){
+    var d = draft;
+    var html = header() + '<div class="stack"><h1>New round</h1>';
+    if(db.courses.length){
+      html += '<div class="stack"><p class="hint">Saved courses</p><div class="chips">';
+      db.courses.forEach(function(c){
+        html += '<button class="chip" type="button" data-act="pickcourse" data-id="' + c.id + '" aria-pressed="' + (d.courseId === c.id) + '">' + esc(c.name) + '</button>';
+      });
+      html += '</div></div>';
+    }
+    html += '<label class="field">Course name<input type="text" id="course" autocomplete="off" placeholder="e.g. your home club" value="' + esc(d.course) + '"></label>';
+    html += '<div class="stack"><p style="font-weight:700">Holes</p><div class="seg" role="group" aria-label="Number of holes">' +
+      '<button type="button" data-act="holes" data-n="9" aria-pressed="' + (d.pars.length === 9) + '">9 holes</button>' +
+      '<button type="button" data-act="holes" data-n="18" aria-pressed="' + (d.pars.length === 18) + '">18 holes</button></div></div>';
+    html += '<div class="stack"><p style="font-weight:700">Par for each hole</p><p class="hint">Tap a hole to switch between par 3, 4 and 5. Total par: ' + d.pars.reduce(function(a,b){return a+b;},0) + '.</p><div class="pars">';
+    d.pars.forEach(function(p, i){
+      html += '<button class="par" type="button" data-act="par" data-i="' + i + '" data-par="' + p + '" aria-label="Hole ' + (i+1) + ', par ' + p + '"><span>' + (i+1) + '</span><b>' + p + '</b></button>';
+    });
+    html += '</div></div>';
+    html += '<div class="stack"><p style="font-weight:700">Format</p><div class="seg" role="group" aria-label="Scoring format">' +
+      '<button type="button" data-act="format" data-f="stroke" aria-pressed="' + (d.format === 'stroke') + '">Stroke play</button>' +
+      '<button type="button" data-act="format" data-f="stableford" aria-pressed="' + (d.format === 'stableford') + '">Stableford</button></div>' +
+      (d.format === 'stableford' ? '<p class="hint">Points per hole: 2 for par, 3 for a birdie, 4 for an eagle, 1 for a bogey. Handicaps come in a later version.</p>' : '') + '</div>';
+    html += '<div class="stack"><p style="font-weight:700">Players</p>';
+    d.players.forEach(function(name, i){
+      html += '<div class="player-row"><label class="sr" for="pl' + i + '">Player ' + (i+1) + '</label><input type="text" id="pl' + i + '" data-pi="' + i + '" autocomplete="off" placeholder="Player ' + (i+1) + '" value="' + esc(name) + '">' +
+        (d.players.length > 1 ? '<button class="icon-btn" type="button" data-act="rmplayer" data-i="' + i + '" aria-label="Remove player ' + (i+1) + '">' + X_ICON + '</button>' : '') + '</div>';
+    });
+    if(d.players.length < 8) html += '<button class="btn btn-ghost" type="button" data-act="addplayer">Add player</button>';
+    html += '</div>';
+    if(error) html += '<p class="error" role="alert">' + esc(error) + '</p>';
+    html += '<button class="btn btn-primary btn-block" type="button" data-act="teeoff">Tee off</button>' +
+      '<button class="btn-text" type="button" data-act="home">Cancel</button></div>';
+    app.innerHTML = html;
+  }
+
+  function teeOff(){
+    var d = draft;
+    var name = d.course.trim();
+    var players = d.players.map(function(p){ return p.trim(); }).filter(Boolean);
+    if(!name){ error = 'Add a course name to tee off.'; render(); return; }
+    if(!players.length){ error = 'Add at least one player to tee off.'; render(); return; }
+    var course = null;
+    db.courses.forEach(function(c){ if(c.name.toLowerCase() === name.toLowerCase()) course = c; });
+    if(course){ course.name = name; course.pars = d.pars.slice(); }
+    else { course = { id: uid(), name: name, pars: d.pars.slice() }; db.courses.push(course); }
+    var r = { id: uid(), course: name, pars: d.pars.slice(), format: d.format, players: players,
+      scores: players.map(function(){ return fill(d.pars.length, null); }), hole: 0, done: false, date: Date.now(), cheered: {} };
+    db.rounds.push(r); save();
+    roundId = r.id; go('round');
+  }
+
+  /* ---------- scorecard ---------- */
+  function renderRound(){
+    var r = getRound(roundId); if(!r){ go('home'); return; }
+    var h = r.hole, par = r.pars[h];
+    r.players.forEach(function(_, p){ if(r.scores[p][h] == null) r.scores[p][h] = par; });
+    save();
+    var html = header() +
+      '<div class="hole-head"><div><p class="muted" style="font-weight:700">' + esc(r.course) + '</p><p class="hole-num">Hole ' + (h+1) + '</p></div>' +
+      '<p style="font-weight:800;font-size:20px">Par ' + par + '</p></div>' +
+      '<nav class="strip" aria-label="Holes">';
+    r.pars.forEach(function(_, i){
+      var done = r.scores.every(function(row){ return row[i] != null; });
+      html += '<button type="button" data-act="jump" data-i="' + i + '" class="' + (done ? 'done' : '') + '"' + (i === h ? ' aria-current="true"' : '') + ' aria-label="Hole ' + (i+1) + '">' + (i+1) + '</button>';
+    });
+    html += '</nav><div class="stack">';
+    r.players.forEach(function(name, p){
+      var s = r.scores[p][h];
+      var good = s < par;
+      html += '<div class="prow"><div><div class="pname">' + esc(name) + '</div><div class="ptotal">Total ' + esc(totalText(r, p)) + '</div></div>' +
+        '<div class="stepper"><button type="button" data-act="minus" data-p="' + p + '" aria-label="One less stroke for ' + esc(name) + '">\u2212</button>' +
+        '<span class="score" aria-label="' + esc(name) + ' scored ' + s + '">' + s + '</span>' +
+        '<button type="button" data-act="plus" data-p="' + p + '" aria-label="One more stroke for ' + esc(name) + '">+</button></div>' +
+        '<div class="tag' + (good ? ' good' : '') + '">' + label(s, par) + (r.format === 'stableford' ? ', ' + Math.max(0, 2 + par - s) + ' pts' : '') + '</div></div>';
+    });
+    html += '</div><div class="nav">' +
+      '<button class="btn btn-ghost" type="button" data-act="prev"' + (h === 0 ? ' disabled' : '') + '>Back</button>' +
+      '<button class="btn btn-primary" type="button" data-act="next">' + (h === r.pars.length - 1 ? 'Finish round' : 'Next hole') + '</button></div>' +
+      '<p style="text-align:center;margin-top:10px"><button class="btn-text" type="button" data-act="home">Save and exit</button></p>';
+    app.innerHTML = html;
+  }
+
+  function advance(r, target){
+    var h = r.hole, par = r.pars[h];
+    r.cheered = r.cheered || {};
+    var heroes = [];
+    if(!r.cheered[h]){
+      r.players.forEach(function(name, p){ var s = r.scores[p][h]; if(s != null && s < par) heroes.push({ name: name, s: s }); });
+    }
+    var proceed = function(){
+      if(target === 'finish'){ r.done = true; save(); go('summary'); }
+      else { r.hole = target; save(); render(); window.scrollTo(0,0); }
+    };
+    if(heroes.length){ r.cheered[h] = true; save(); celebrate(heroes, par, h, proceed); }
+    else proceed();
+  }
+
+  var after = null;
+  function celebrate(heroes, par, h, cb){
+    var best = heroes.reduce(function(a,b){ return b.s < a.s ? b : a; });
+    var title = label(best.s, par);
+    var names = heroes.map(function(x){ return x.name; });
+    var who = names.length === 1 ? names[0] : names.slice(0,-1).join(', ') + ' and ' + names[names.length-1];
+    document.getElementById('celebrate-title').textContent = title + '!';
+    document.getElementById('celebrate-text').textContent = who + (names.length === 1 ? ' made ' : ' made ') + (heroes.length === 1 ? 'a ' + title.toLowerCase() : 'it under par') + ' on hole ' + (h+1) + '. Time to rub it in.';
+    document.getElementById('celebrate-mascot').innerHTML = MASCOT;
+    var el = document.getElementById('celebrate');
+    el.hidden = false; after = cb;
+    document.getElementById('celebrate-close').focus();
+  }
+  document.getElementById('celebrate-close').addEventListener('click', function(){
+    document.getElementById('celebrate').hidden = true;
+    var cb = after; after = null; if(cb) cb();
+  });
+
+  /* ---------- summary ---------- */
+  function renderSummary(){
+    var r = getRound(roundId); if(!r){ go('home'); return; }
+    var stab = r.format === 'stableford';
+    var rows = r.players.map(function(name, p){ var st = stats(r, p); return { name: name, st: st, p: p }; });
+    rows.sort(function(a,b){ return stab ? b.st.pts - a.st.pts : a.st.diff - b.st.diff; });
+    var html = header() + '<div class="stack"><h1>' + (r.done ? 'Round finished' : 'Leaderboard') + '</h1><p class="muted">' + esc(r.course) + ', ' + fmtDate(r.date) + ', ' + (stab ? 'Stableford' : 'stroke play') + '</p>';
+    html += '<div class="board">';
+    rows.forEach(function(x, i){
+      var main = stab ? x.st.pts + ' pts' : (x.st.played ? toPar(x.st.diff) : '\u2013');
+      var sub = stab ? x.st.strokes + ' strokes' : x.st.strokes + ' strokes';
+      html += '<div class="brow' + (i === 0 ? ' first' : '') + '"><span class="rank">' + (i+1) + '</span><span class="pname">' + esc(x.name) + '</span><span class="bscore">' + main + '<small>' + sub + '</small></span></div>';
+    });
+    html += '</div>';
+    var text = shareText(r, rows, stab);
+    var hasShare = !!navigator.share;
+    html += '<div class="stack">' +
+      (hasShare ? '<button class="btn btn-accent btn-block" type="button" data-act="share">Share result</button>' : '') +
+      '<a class="btn ' + (hasShare ? 'btn-ghost' : 'btn-accent') + ' btn-block" href="https://wa.me/?text=' + encodeURIComponent(text) + '" target="_blank" rel="noopener">Send on WhatsApp</a></div>';
+    html += '<section class="section"><h2>Scorecard</h2><div class="table-box"><table><thead><tr><th scope="col">Hole</th>';
+    r.pars.forEach(function(_, i){ html += '<th scope="col">' + (i+1) + '</th>'; });
+    html += '<th scope="col">Total</th></tr><tr><td>Par</td>';
+    r.pars.forEach(function(p){ html += '<td>' + p + '</td>'; });
+    html += '<td>' + r.pars.reduce(function(a,b){return a+b;},0) + '</td></tr></thead><tbody>';
+    r.players.forEach(function(name, p){
+      html += '<tr><td>' + esc(name) + '</td>';
+      r.pars.forEach(function(par, i){ var s = r.scores[p][i]; html += '<td' + (s != null && s < par ? ' class="under"' : '') + '>' + (s == null ? '\u2013' : s) + '</td>'; });
+      html += '<td>' + stats(r, p).strokes + '</td></tr>';
+    });
+    html += '</tbody></table></div></section>';
+    html += '<div class="nav"><button class="btn btn-ghost" type="button" data-act="edit">Edit scores</button><button class="btn btn-primary" type="button" data-act="home">Done</button></div>' +
+      '<p style="text-align:center;margin-top:6px"><button class="btn-text" type="button" data-act="delete">Delete this round</button></p></div>';
+    app.innerHTML = html;
+  }
+  function shareText(r, rows, stab){
+    var lines = ['Fore Birdies: ' + r.course + ' (' + (stab ? 'Stableford' : 'stroke play') + ')'];
+    rows.forEach(function(x, i){
+      lines.push((i+1) + '. ' + x.name + ': ' + (stab ? x.st.pts + ' pts' : x.st.strokes + ' (' + toPar(x.st.diff) + ')'));
+    });
+    return lines.join('\n');
+  }
+
+  /* ---------- render & events ---------- */
+  function render(){
+    if(view === 'setup') renderSetup();
+    else if(view === 'round') renderRound();
+    else if(view === 'summary') renderSummary();
+    else renderHome();
+  }
+
+  app.addEventListener('input', function(e){
+    if(!draft) return;
+    if(e.target.id === 'course'){ draft.course = e.target.value; draft.courseId = null; }
+    if(e.target.dataset.pi != null){ draft.players[+e.target.dataset.pi] = e.target.value; }
+  });
+
+  app.addEventListener('click', function(e){
+    var b = e.target.closest('[data-act]'); if(!b) return;
+    var act = b.dataset.act;
+    var r = roundId ? getRound(roundId) : null;
+    switch(act){
+      case 'new': newDraft(); go('setup'); break;
+      case 'home': draft = null; go('home'); break;
+      case 'open': roundId = b.dataset.id; r = getRound(roundId); go(r && r.done ? 'summary' : 'round'); break;
+      case 'pickcourse':
+        db.courses.forEach(function(c){ if(c.id === b.dataset.id){ draft.courseId = c.id; draft.course = c.name; draft.pars = c.pars.slice(); } });
+        error = ''; render(); break;
+      case 'holes':
+        var n = +b.dataset.n;
+        draft.pars = n === 9 ? draft.pars.slice(0,9) : draft.pars.concat(fill(18 - draft.pars.length, 4)).slice(0,18);
+        render(); break;
+      case 'par':
+        var i = +b.dataset.i; draft.pars[i] = draft.pars[i] >= 5 ? 3 : draft.pars[i] + 1; render();
+        var again = app.querySelector('[data-act="par"][data-i="' + i + '"]'); if(again) again.focus();
+        break;
+      case 'format': draft.format = b.dataset.f; render(); break;
+      case 'addplayer':
+        draft.players.push(''); render();
+        var inp = document.getElementById('pl' + (draft.players.length - 1)); if(inp) inp.focus();
+        break;
+      case 'rmplayer': draft.players.splice(+b.dataset.i, 1); render(); break;
+      case 'teeoff': teeOff(); break;
+      case 'minus': case 'plus':
+        var p = +b.dataset.p, s = r.scores[p][r.hole];
+        s = act === 'plus' ? Math.min(15, s + 1) : Math.max(1, s - 1);
+        r.scores[p][r.hole] = s; r.cheered && (r.cheered[r.hole] = false); save(); render();
+        var same = app.querySelector('[data-act="' + act + '"][data-p="' + p + '"]'); if(same) same.focus();
+        break;
+      case 'jump': r.hole = +b.dataset.i; save(); render(); break;
+      case 'prev': if(r.hole > 0){ r.hole--; save(); render(); } break;
+      case 'next': advance(r, r.hole === r.pars.length - 1 ? 'finish' : r.hole + 1); break;
+      case 'edit': r.done = false; r.hole = 0; save(); go('round'); break;
+      case 'share':
+        var stab = r.format === 'stableford';
+        var rows = r.players.map(function(name, p){ return { name: name, st: stats(r, p) }; });
+        rows.sort(function(a,b){ return stab ? b.st.pts - a.st.pts : a.st.diff - b.st.diff; });
+        navigator.share({ title: 'Fore Birdies', text: shareText(r, rows, stab) }).catch(function(){});
+        break;
+      case 'delete':
+        if(confirm('Delete this round? This can\u2019t be undone.')){
+          db.rounds = db.rounds.filter(function(x){ return x.id !== roundId; }); save(); roundId = null; go('home');
+        }
+        break;
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
