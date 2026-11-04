@@ -8,6 +8,13 @@ const X_ICON = (
   </svg>
 );
 
+// Shown on the selected course so it's clear that tapping again removes it.
+const CHIP_X = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+
 export default function Setup({ courses, onTeeOff, onCancel }) {
   const [d, setD] = useState({ courseId: null, course: '', pars: fill(18, 4), format: 'stroke', players: ['You', ''] });
   const [error, setError] = useState('');
@@ -57,6 +64,7 @@ export default function Setup({ courses, onTeeOff, onCancel }) {
                 <button key={c.id} className="chip" type="button" aria-pressed={d.courseId === c.id}
                   onClick={() => pickCourse(c)}>
                   {c.name}
+                  {d.courseId === c.id && CHIP_X}
                 </button>
               ))}
             </div>
