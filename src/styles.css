@@ -71,7 +71,7 @@ input[type=text]:focus{border-color:var(--green)}
 .par[data-par="3"]{border-color:#7FBF98}
 .par[data-par="5"]{border-color:var(--yellow)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{min-height:44px;border-radius:22px;border:2px solid var(--line);background:var(--surface);padding:0 16px;font-weight:700;cursor:pointer}
+.chip{min-height:44px;border-radius:22px;border:2px solid var(--line);background:var(--surface);padding:0 16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
 .chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
 .player-row{display:flex;gap:8px;align-items:center}
 .icon-btn{width:48px;height:48px;flex:none;border-radius:50%;border:2px solid var(--line);background:var(--surface);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
