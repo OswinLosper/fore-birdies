@@ -1,47 +1,73 @@
-import { useRef, useState } from 'react';
-import { load, save, uid, fill } from './storage.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { watchUser, finishLinkSignIn, logOut } from './auth.js';
+import { load, uid } from './storage.js';
+import {
+  watchRounds, watchCourses, saveCourse, newRoundId, createRound, saveRoundChanges, deleteRoundDoc, importLocal, saveUi,
+} from './data.js';
 import Home from './screens/Home.jsx';
 import Setup from './screens/Setup.jsx';
 import Round from './screens/Round.jsx';
 import Summary from './screens/Summary.jsx';
+import SignIn from './screens/SignIn.jsx';
 import Celebrate from './Celebrate.jsx';
+import Confirm from './Confirm.jsx';
 
 export default function App() {
-  const [db, setDb] = useState(load);
-  // Latest data, so callbacks that run later (after the birdie screen) never work on a stale copy.
-  const dbRef = useRef(db);
+  // undefined while Firebase checks whether this phone is already signed in.
+  const [user, setUser] = useState(undefined);
+  const [rounds, setRounds] = useState([]);
+  const [courses, setCourses] = useState([]);
+  // Latest rounds, so callbacks that run later (after the birdie screen) never work on a stale copy.
+  const roundsRef = useRef(rounds);
   const [view, setView] = useState('home');
   const [roundId, setRoundId] = useState(null);
   const [celebration, setCelebration] = useState(null);
+  const [asking, setAsking] = useState(null);
+  const closeAsk = useCallback(() => setAsking(null), []);
 
-  const round = roundId ? db.rounds.find((r) => r.id === roundId) : null;
+  useEffect(() => {
+    finishLinkSignIn().catch((err) => console.error('email link', err));
+    return watchUser(setUser);
+  }, []);
 
-  function commit(next) { dbRef.current = next; save(next); setDb(next); }
+  useEffect(() => {
+    if (!user) { setRounds([]); setCourses([]); roundsRef.current = []; return undefined; }
+    importLocal(user, load());
+    const stopRounds = watchRounds(user.uid, (rs) => { roundsRef.current = rs; setRounds(rs); });
+    const stopCourses = watchCourses(user.uid, setCourses);
+    return () => { stopRounds(); stopCourses(); };
+  }, [user?.uid]);
+
+  const round = roundId ? rounds.find((r) => r.id === roundId) : null;
 
   function go(v) { setView(v); window.scrollTo(0, 0); }
 
-  // Copy, change one round, save. Data is small, so a full clone keeps this simple.
+  // Copy, change, then save only what changed. The new copy is used straight away,
+  // before Firebase reports it back.
   function updateRound(fn) {
-    const next = structuredClone(dbRef.current);
-    const r = next.rounds.find((x) => x.id === roundId);
-    fn(r);
-    commit(next);
-    return r;
+    const before = roundsRef.current.find((x) => x.id === roundId);
+    const after = structuredClone(before);
+    fn(after);
+    saveRoundChanges(user, before, after);
+    roundsRef.current = roundsRef.current.map((x) => (x.id === roundId ? after : x));
+    setRounds(roundsRef.current);
+    return after;
   }
 
   function teeOff(d) {
     const name = d.course.trim();
     const players = d.players.map((p) => p.trim()).filter(Boolean);
-    const next = structuredClone(dbRef.current);
-    const course = next.courses.find((c) => c.name.toLowerCase() === name.toLowerCase());
-    if (course) { course.name = name; course.pars = d.pars.slice(); }
-    else next.courses.push({ id: uid(), name, pars: d.pars.slice() });
+    const existing = courses.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    saveCourse(user.uid, { id: existing ? existing.id : uid(), name, pars: d.pars.slice() });
     const r = {
-      id: uid(), course: name, pars: d.pars.slice(), format: d.format, players,
-      scores: players.map(() => fill(d.pars.length, null)), hole: 0, done: false, date: Date.now(), cheered: {},
+      id: newRoundId(), ownerId: user.uid, course: name, pars: d.pars.slice(), format: d.format, players,
+      scores: players.map(() => d.pars.map(() => null)), by: players.map(() => d.pars.map(() => null)),
+      hole: 0, done: false, date: Date.now(), cheered: {},
     };
-    next.rounds.push(r);
-    commit(next);
+    createRound(user, r);
+    saveUi(r.id, { hole: 0, cheered: {} });
+    roundsRef.current = [...roundsRef.current, r];
+    setRounds(roundsRef.current);
     setRoundId(r.id);
     go('round');
   }
@@ -62,20 +88,37 @@ export default function App() {
     const heroes = r.cheered?.[h] ? [] :
       r.players.map((name, p) => ({ name, s: r.scores[p][h] })).filter((x) => x.s < par);
     if (!heroes.length) { proceed(); return; }
-    updateRound((x) => { x.cheered = x.cheered || {}; x.cheered[h] = true; });
+    updateRound((x) => { x.cheered = { ...x.cheered, [h]: true }; });
     setCelebration({ heroes, par, hole: h, then: proceed });
   }
 
   function deleteRound() {
-    if (!window.confirm('Delete this round? This can’t be undone.')) return;
-    commit({ ...dbRef.current, rounds: dbRef.current.rounds.filter((x) => x.id !== roundId) });
-    setRoundId(null);
-    go('home');
+    setAsking({
+      title: 'Delete this round?', text: 'This can’t be undone.', yes: 'Delete',
+      then: () => {
+        deleteRoundDoc(roundId);
+        roundsRef.current = roundsRef.current.filter((x) => x.id !== roundId);
+        setRounds(roundsRef.current);
+        setRoundId(null);
+        go('home');
+      },
+    });
   }
 
+  function signOutNow() {
+    setAsking({
+      title: 'Sign out?', text: 'Your rounds stay saved in your account.', yes: 'Sign out',
+      then: () => { setRoundId(null); setView('home'); logOut(); },
+    });
+  }
+
+  if (user === undefined) return <main className="wrap" />;
+
   let screen;
-  if (view === 'setup') {
-    screen = <Setup courses={db.courses} onTeeOff={teeOff} onCancel={() => go('home')} />;
+  if (!user) {
+    screen = <SignIn />;
+  } else if (view === 'setup') {
+    screen = <Setup courses={courses} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')} />;
   } else if (view === 'round' && round) {
     screen = <Round round={round} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')} />;
   } else if (view === 'summary' && round) {
@@ -90,9 +133,11 @@ export default function App() {
   } else {
     screen = (
       <Home
-        rounds={db.rounds}
+        rounds={rounds}
+        user={user}
         onNew={() => go('setup')}
         onOpen={(r) => { setRoundId(r.id); go(r.done ? 'summary' : 'round'); }}
+        onSignOut={signOutNow}
       />
     );
   }
@@ -105,6 +150,9 @@ export default function App() {
           {...celebration}
           onClose={() => { const then = celebration.then; setCelebration(null); then(); }}
         />
+      )}
+      {asking && (
+        <Confirm {...asking} onNo={closeAsk} onYes={() => { const then = asking.then; setAsking(null); then(); }} />
       )}
     </>
   );

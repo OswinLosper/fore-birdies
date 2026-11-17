@@ -15,8 +15,8 @@ const CHIP_X = (
   </svg>
 );
 
-export default function Setup({ courses, onTeeOff, onCancel }) {
-  const [d, setD] = useState({ courseId: null, course: '', pars: fill(18, 4), format: 'stroke', players: ['You', ''] });
+export default function Setup({ courses, you, onTeeOff, onCancel }) {
+  const [d, setD] = useState({ courseId: null, course: '', pars: fill(18, 4), format: 'stroke', players: [you || 'You', ''] });
   const [error, setError] = useState('');
   const set = (patch) => setD((old) => ({ ...old, ...patch }));
   const focusNew = useRef(false);

@@ -3,7 +3,7 @@ import InstallTip from '../InstallTip.jsx';
 import mascot from '../assets/mascot.svg';
 import { totalText, fmtDate } from '../scoring.js';
 
-export default function Home({ rounds, onNew, onOpen }) {
+export default function Home({ rounds, user, onNew, onOpen, onSignOut }) {
   const sorted = rounds.slice().sort((a, b) => b.date - a.date);
   return (
     <>
@@ -41,6 +41,10 @@ export default function Home({ rounds, onNew, onOpen }) {
           </div>
         )}
       </section>
+      <div className="account">
+        <span>Signed in as {user.email || user.name}</span>
+        <button className="btn-text" type="button" onClick={onSignOut}>Sign out</button>
+      </div>
     </>
   );
 }

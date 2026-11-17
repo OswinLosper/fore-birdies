@@ -1,4 +1,5 @@
-// Everything is kept on this phone only, under the same key the prototype used.
+// Before accounts, everything was kept on the phone under this key. It's now only read once,
+// to bring those rounds into the account at first sign-in (see importLocal in data.js).
 const KEY = 'fore-birdies-v1';
 
 export function load() {
@@ -10,10 +11,6 @@ export function load() {
     }
   } catch (e) {}
   return { courses: [], rounds: [] };
-}
-
-export function save(db) {
-  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {}
 }
 
 export function uid() {

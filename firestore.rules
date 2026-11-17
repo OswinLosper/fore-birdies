@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Stage 1: each person reads and writes only their own courses and rounds.
+// Stage 2 adds joining a round with a code.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Saved courses are private to each person.
+    match /users/{uid}/courses/{courseId} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /rounds/{roundId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.memberIds;
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.memberIds == [request.auth.uid];
+      // Members edit scores. Nobody can change who owns the round or who is in it (yet).
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.memberIds
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.memberIds == resource.data.memberIds;
+      // Only the starter can delete the round.
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+  }
+}

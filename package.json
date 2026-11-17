@@ -5,17 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:emu": "vite --host --mode emulator",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-fore-birdies",
     "build": "vite build",
     "preview": "vite preview --host",
     "icons": "pwa-assets-generator"
   },
   "dependencies": {
+    "firebase": "13.4.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@vite-pwa/assets-generator": "2.0.0",
     "@vitejs/plugin-react": "6.2.1",
+    "firebase-tools": "15.36.0",
     "vite": "8.3.5",
     "vite-plugin-pwa": "2.0.0"
   },
