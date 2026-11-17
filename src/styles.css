@@ -147,3 +147,5 @@ input.code-input{font-family:'Fredoka',system-ui,sans-serif;font-size:28px;lette
 .code-bar a{font-weight:800;color:var(--ink)}
 .guest{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px}
 .you{font-size:13px;font-weight:800;color:var(--muted);margin-left:6px}
+.changed{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-top:2px}
+.sync{font-size:14px;font-weight:700;color:var(--muted);background:var(--green-soft);border-radius:12px;padding:6px 12px;margin-top:10px}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Header from '../Header.jsx';
 import CodeBar from '../CodeBar.jsx';
 import { label, totalText, holeDone, stablefordPoints } from '../scoring.js';
@@ -10,6 +11,13 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
   const last = h === r.pars.length - 1;
   const starter = r.ownerId === me.uid;
   const mine = r.claims[me.uid];
+  // Every save is briefly "pending" even with signal, so only mention it after a few seconds.
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    if (!r.pending) { setStuck(false); return undefined; }
+    const t = setTimeout(() => setStuck(true), 3000);
+    return () => clearTimeout(t);
+  }, [r.pending]);
 
   function step(p, delta) {
     onChange((x) => {
@@ -30,6 +38,7 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
         </div>
         <p style={{ fontWeight: 800, fontSize: 20 }}>Par {par}</p>
       </div>
+      {stuck && r.code && <p className="sync" role="status">Saved on this phone. Your mates see it once you have signal.</p>}
       {starter && r.code && <CodeBar round={r} />}
       <nav className="strip" aria-label="Holes">
         {r.pars.map((_, i) => (
@@ -43,6 +52,9 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
         {r.players.map((name, p) => {
           const pending = r.scores[p][h] == null;
           const s = pending ? par : r.scores[p][h];
+          // Someone else's phone set this score last, so say who. Matters when two phones disagree.
+          const by = r.by[p][h];
+          const other = !pending && by && by.uid !== me.uid ? by.name : null;
           return (
             <div key={p} className="prow">
               <div>
@@ -58,6 +70,7 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
                 {pending
                   ? 'Par unless you change it'
                   : label(s, par) + (r.format === 'stableford' ? ', ' + stablefordPoints(s, par) + ' pts' : '')}
+                {other && <span className="changed">Changed by {other}</span>}
               </div>
             </div>
           );

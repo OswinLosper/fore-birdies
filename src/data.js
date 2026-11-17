@@ -27,22 +27,25 @@ export function saveUi(roundId, patch) {
 }
 
 // Firestore document -> the round shape the screens already use.
-function toRound(id, d, ui) {
-  const scores = d.players.map((_, p) => d.pars.map((__, h) => d.scores?.[scoreKey(p, h)]?.s ?? null));
-  const by = d.players.map((_, p) => d.pars.map((__, h) => d.scores?.[scoreKey(p, h)]?.byName ?? null));
+// by[p][h] = { uid, name } of whoever last changed that score.
+// pending = some changes are saved on this phone but haven't reached the server yet.
+function toRound(id, d, ui, pending = false) {
+  const cell = (p, h) => d.scores?.[scoreKey(p, h)];
+  const scores = d.players.map((_, p) => d.pars.map((__, h) => cell(p, h)?.s ?? null));
+  const by = d.players.map((_, p) => d.pars.map((__, h) => (cell(p, h) ? { uid: cell(p, h).by, name: cell(p, h).byName } : null)));
   return {
     id, ownerId: d.ownerId, code: d.code || null, claims: d.claims || {}, memberNames: d.memberNames || {},
     course: d.course, pars: d.pars, format: d.format, players: d.players,
-    scores, by, done: !!d.done, date: d.date,
+    scores, by, pending, done: !!d.done, date: d.date,
     hole: Math.min(ui?.hole ?? 0, d.pars.length - 1), cheered: ui?.cheered || {},
   };
 }
 
 export function watchRounds(uid, onRounds) {
   const q = query(collection(db, 'rounds'), where('memberIds', 'array-contains', uid));
-  return onSnapshot(q, (snap) => {
+  return onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
     const ui = loadUi();
-    onRounds(snap.docs.map((x) => toRound(x.id, x.data(), ui[x.id])));
+    onRounds(snap.docs.map((x) => toRound(x.id, x.data(), ui[x.id], x.metadata.hasPendingWrites)));
   }, (err) => console.error('rounds', err));
 }
 
@@ -120,12 +123,17 @@ export function leaveRound(user, id) {
   queued(updateDoc(doc(db, 'rounds', id), { memberIds: arrayRemove(user.uid) }));
 }
 
-// Save only what changed between two versions of a round.
+// Save only what changed between two versions of a round. Also marks the changed scores
+// as yours on `after`, so the screen is right before Firebase reports back.
 export function saveRoundChanges(user, before, after) {
   const patch = {};
   after.scores.forEach((row, p) => row.forEach((s, h) => {
-    if (s != null && s !== before.scores[p][h]) patch['scores.' + scoreKey(p, h)] = { s, by: user.uid, byName: user.name };
+    if (s != null && s !== before.scores[p][h]) {
+      patch['scores.' + scoreKey(p, h)] = { s, by: user.uid, byName: user.name };
+      after.by[p][h] = { uid: user.uid, name: user.name };
+    }
   }));
+  if (Object.keys(patch).length) after.pending = true;
   if (after.done !== before.done) patch.done = after.done;
   if (Object.keys(patch).length) queued(updateDoc(doc(db, 'rounds', after.id), patch));
   if (after.hole !== before.hole || after.cheered !== before.cheered) {
