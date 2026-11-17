@@ -138,3 +138,12 @@ td.under{color:var(--green);font-weight:800}
 .confirm-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 .confirm{width:100%;max-width:400px}
 .confirm-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* shared rounds */
+input.code-input{font-family:'Fredoka',system-ui,sans-serif;font-size:28px;letter-spacing:.2em;text-transform:uppercase;text-align:center;height:60px}
+.item:disabled{opacity:.6;cursor:default}
+.code-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--green-soft);border-radius:16px;padding:10px 14px;margin:12px 0}
+.code-bar b{font-family:'Fredoka',system-ui,sans-serif;font-size:22px;letter-spacing:.12em}
+.code-bar small{display:block;color:var(--muted);font-size:13px}
+.code-bar a{font-weight:800;color:var(--ink)}
+.guest{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.you{font-size:13px;font-weight:800;color:var(--muted);margin-left:6px}

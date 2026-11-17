@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import Header from '../Header.jsx';
 import mascot from '../assets/mascot.svg';
-import { signInGoogle, signInPassword, createAccount, resetPassword, sendLink, authMessage } from '../auth.js';
+import {
+  signInGoogle, signInPassword, createAccount, resetPassword, sendLink, upgradeGoogle, upgradeEmail, authMessage,
+} from '../auth.js';
 
-export default function SignIn() {
-  const [mode, setMode] = useState('signin');
-  const [name, setName] = useState('');
+// upgrade: a guest making an account. It keeps the same user, so their joined rounds come along.
+export default function SignIn({ upgrade, guestName, onJoin, onCancel }) {
+  const [mode, setMode] = useState(upgrade ? 'create' : 'signin');
+  const [name, setName] = useState(guestName || '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +24,8 @@ export default function SignIn() {
 
   function submit(e) {
     e.preventDefault();
-    if (mode === 'create') run(() => createAccount(name, email, password));
+    if (upgrade) run(() => upgradeEmail(name, email, password));
+    else if (mode === 'create') run(() => createAccount(name, email, password));
     else run(() => signInPassword(email, password));
   }
 
@@ -31,20 +35,28 @@ export default function SignIn() {
       <section className="hero">
         <div className="mascot"><img src={mascot} alt="" /></div>
         <div className="hero-text stack">
-          <h1>Sign in to keep score</h1>
-          <p>Your rounds are saved to your account, so they’re safe even if you lose your phone.</p>
+          <h1>{upgrade ? 'Keep your rounds' : 'Sign in to keep score'}</h1>
+          <p>{upgrade
+            ? 'Make your free account. The rounds you joined as a guest come with you.'
+            : 'Your rounds are saved to your account, so they’re safe even if you lose your phone.'}</p>
         </div>
       </section>
       <div className="stack" style={{ marginTop: 18 }}>
+        {!upgrade && (
+          <>
+            <button className="btn btn-accent btn-block" type="button" onClick={onJoin}>Got a code? Join a mate’s round</button>
+            <p className="hint">No account needed to join. To start your own rounds, sign in below.</p>
+          </>
+        )}
         <p className="hint">The first sign-in needs signal, so do it at home or in the clubhouse. After that the app works on the course without signal.</p>
-        <button className="btn btn-ghost btn-block" type="button" disabled={busy} onClick={() => run(signInGoogle)}>
+        <button className="btn btn-ghost btn-block" type="button" disabled={busy} onClick={() => run(upgrade ? upgradeGoogle : signInGoogle)}>
           Continue with Google
         </button>
         <p className="muted or">or use your email</p>
-        <div className="seg" role="group" aria-label="Sign in or create an account">
+        {!upgrade && <div className="seg" role="group" aria-label="Sign in or create an account">
           <button type="button" aria-pressed={mode === 'signin'} onClick={() => { setMode('signin'); setError(''); }}>Sign in</button>
           <button type="button" aria-pressed={mode === 'create'} onClick={() => { setMode('create'); setError(''); }}>Create account</button>
-        </div>
+        </div>}
         <form className="stack" onSubmit={submit} noValidate>
           {mode === 'create' && (
             <label className="field">Your name
@@ -66,7 +78,9 @@ export default function SignIn() {
             {mode === 'create' ? 'Create account' : 'Sign in'}
           </button>
         </form>
-        <div className="links">
+        {upgrade ? (
+          <button className="btn-text" type="button" onClick={onCancel}>Not now</button>
+        ) : <div className="links">
           {mode === 'signin' && (
             <button className="btn-text" type="button" disabled={busy}
               onClick={() => run(() => resetPassword(email), 'Check your email for a link to reset your password.')}>
@@ -77,7 +91,7 @@ export default function SignIn() {
             onClick={() => run(() => sendLink(email), 'Check your email and tap the link to sign in. Open it on this phone.')}>
             Email me a sign-in link instead
           </button>
-        </div>
+        </div>}
       </div>
     </>
   );

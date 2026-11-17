@@ -2,15 +2,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { watchUser, finishLinkSignIn, logOut } from './auth.js';
 import { load, uid } from './storage.js';
 import {
-  watchRounds, watchCourses, saveCourse, newRoundId, createRound, saveRoundChanges, deleteRoundDoc, importLocal, saveUi,
+  watchRounds, watchCourses, saveCourse, newRoundId, newCode, createRound, saveRoundChanges, deleteRoundDoc,
+  importLocal, saveUi, leaveRound,
 } from './data.js';
 import Home from './screens/Home.jsx';
 import Setup from './screens/Setup.jsx';
 import Round from './screens/Round.jsx';
 import Summary from './screens/Summary.jsx';
 import SignIn from './screens/SignIn.jsx';
+import Join from './screens/Join.jsx';
 import Celebrate from './Celebrate.jsx';
 import Confirm from './Confirm.jsx';
+
+// A shared link looks like https://fore-birdies.vercel.app/?join=K7MP2Q
+function codeFromLink() {
+  const code = new URLSearchParams(location.search).get('join');
+  if (code) history.replaceState(null, '', '/');
+  return code;
+}
 
 export default function App() {
   // undefined while Firebase checks whether this phone is already signed in.
@@ -19,7 +28,8 @@ export default function App() {
   const [courses, setCourses] = useState([]);
   // Latest rounds, so callbacks that run later (after the birdie screen) never work on a stale copy.
   const roundsRef = useRef(rounds);
-  const [view, setView] = useState('home');
+  const [joinCode] = useState(codeFromLink);
+  const [view, setView] = useState(joinCode ? 'join' : 'home');
   const [roundId, setRoundId] = useState(null);
   const [celebration, setCelebration] = useState(null);
   const [asking, setAsking] = useState(null);
@@ -32,13 +42,16 @@ export default function App() {
 
   useEffect(() => {
     if (!user) { setRounds([]); setCourses([]); roundsRef.current = []; return undefined; }
-    importLocal(user, load());
     const stopRounds = watchRounds(user.uid, (rs) => { roundsRef.current = rs; setRounds(rs); });
+    if (user.guest) return stopRounds;
+    // Guests have no saved courses and nothing to import.
+    importLocal(user, load());
     const stopCourses = watchCourses(user.uid, setCourses);
     return () => { stopRounds(); stopCourses(); };
-  }, [user?.uid]);
+  }, [user?.uid, user?.guest]);
 
   const round = roundId ? rounds.find((r) => r.id === roundId) : null;
+  const starter = !!(round && user && round.ownerId === user.uid);
 
   function go(v) { setView(v); window.scrollTo(0, 0); }
 
@@ -59,8 +72,11 @@ export default function App() {
     const players = d.players.map((p) => p.trim()).filter(Boolean);
     const existing = courses.find((c) => c.name.toLowerCase() === name.toLowerCase());
     saveCourse(user.uid, { id: existing ? existing.id : uid(), name, pars: d.pars.slice() });
+    // The starter is the first player when that's their own name.
+    const claims = players[0] === user.name ? { [user.uid]: 0 } : {};
     const r = {
-      id: newRoundId(), ownerId: user.uid, course: name, pars: d.pars.slice(), format: d.format, players,
+      id: newRoundId(), code: newCode(), ownerId: user.uid, claims, memberNames: { [user.uid]: user.name },
+      course: name, pars: d.pars.slice(), format: d.format, players,
       scores: players.map(() => d.pars.map(() => null)), by: players.map(() => d.pars.map(() => null)),
       hole: 0, done: false, date: Date.now(), cheered: {},
     };
@@ -73,7 +89,8 @@ export default function App() {
   }
 
   // Leaving a hole with "Next hole" / "Finish round" saves anyone left on the default par,
-  // then celebrates birdie-or-better once per hole.
+  // then celebrates birdie-or-better once per hole. Only the starter finishes the round;
+  // everyone else goes to the leaderboard from the last hole.
   function leaveHole() {
     const h = round.hole;
     const r = updateRound((r) => {
@@ -82,7 +99,7 @@ export default function App() {
     const par = r.pars[h];
     const last = h === r.pars.length - 1;
     const proceed = () => {
-      updateRound((x) => { if (last) x.done = true; else x.hole = h + 1; });
+      updateRound((x) => { if (last) x.done = x.done || starter; else x.hole = h + 1; });
       if (last) go('summary'); else window.scrollTo(0, 0);
     };
     const heroes = r.cheered?.[h] ? [] :
@@ -96,7 +113,7 @@ export default function App() {
     setAsking({
       title: 'Delete this round?', text: 'This can’t be undone.', yes: 'Delete',
       then: () => {
-        deleteRoundDoc(roundId);
+        deleteRoundDoc(round);
         roundsRef.current = roundsRef.current.filter((x) => x.id !== roundId);
         setRounds(roundsRef.current);
         setRoundId(null);
@@ -105,9 +122,31 @@ export default function App() {
     });
   }
 
+  function leaveNow() {
+    setAsking({
+      title: 'Leave this round?', text: 'It disappears from your rounds. The others keep playing.', yes: 'Leave',
+      then: () => {
+        leaveRound(user, roundId);
+        roundsRef.current = roundsRef.current.filter((x) => x.id !== roundId);
+        setRounds(roundsRef.current);
+        setRoundId(null);
+        go('home');
+      },
+    });
+  }
+
+  function openJoined(id) {
+    setRoundId(id);
+    go('round');
+  }
+
   function signOutNow() {
     setAsking({
-      title: 'Sign out?', text: 'Your rounds stay saved in your account.', yes: 'Sign out',
+      title: 'Sign out?',
+      text: user.guest
+        ? 'You’re a guest, so you’ll lose these rounds on this phone. Create an account first to keep them.'
+        : 'Your rounds stay saved in your account.',
+      yes: 'Sign out',
       then: () => { setRoundId(null); setView('home'); logOut(); },
     });
   }
@@ -115,19 +154,26 @@ export default function App() {
   if (user === undefined) return <main className="wrap" />;
 
   let screen;
-  if (!user) {
-    screen = <SignIn />;
-  } else if (view === 'setup') {
+  if (view === 'join') {
+    screen = <Join user={user} initialCode={joinCode} onJoined={openJoined} onCancel={() => go('home')} />;
+  } else if (!user) {
+    screen = <SignIn onJoin={() => go('join')} />;
+  } else if (view === 'upgrade' && user.guest) {
+    screen = <SignIn upgrade guestName={user.name} onCancel={() => go('home')} />;
+  } else if (view === 'setup' && !user.guest) {
     screen = <Setup courses={courses} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')} />;
   } else if (view === 'round' && round) {
-    screen = <Round round={round} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')} />;
+    screen = <Round round={round} me={user} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')} />;
   } else if (view === 'summary' && round) {
     screen = (
       <Summary
         round={round}
+        starter={starter}
         onEdit={() => { updateRound((r) => { r.done = false; r.hole = 0; }); go('round'); }}
+        onBack={() => go('round')}
         onDone={() => go('home')}
         onDelete={deleteRound}
+        onLeave={leaveNow}
       />
     );
   } else {
@@ -136,6 +182,8 @@ export default function App() {
         rounds={rounds}
         user={user}
         onNew={() => go('setup')}
+        onJoin={() => go('join')}
+        onUpgrade={() => go('upgrade')}
         onOpen={(r) => { setRoundId(r.id); go(r.done ? 'summary' : 'round'); }}
         onSignOut={signOutNow}
       />

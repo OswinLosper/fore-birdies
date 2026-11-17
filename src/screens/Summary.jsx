@@ -1,7 +1,9 @@
 import Header from '../Header.jsx';
 import { leaderboard, shareText, toPar, stats, fmtDate } from '../scoring.js';
 
-export default function Summary({ round: r, onEdit, onDone, onDelete }) {
+// Only the starter re-opens or deletes a round. Everyone else can go back to scoring
+// (while it's still being played) or leave it.
+export default function Summary({ round: r, starter, onEdit, onBack, onDone, onDelete, onLeave }) {
   const stab = r.format === 'stableford';
   const rows = leaderboard(r);
   const text = shareText(r);
@@ -69,11 +71,18 @@ export default function Summary({ round: r, onEdit, onDone, onDelete }) {
           </div>
         </section>
         <div className="nav">
-          <button className="btn btn-ghost" type="button" onClick={onEdit}>Edit scores</button>
+          {starter ? (
+            <button className="btn btn-ghost" type="button" onClick={onEdit}>Edit scores</button>
+          ) : (
+            <button className="btn btn-ghost" type="button" disabled={r.done} onClick={onBack}>Back to scores</button>
+          )}
           <button className="btn btn-primary" type="button" onClick={onDone}>Done</button>
         </div>
+        {!starter && !r.done && <p className="hint" style={{ textAlign: 'center' }}>The starter finishes the round.</p>}
         <p style={{ textAlign: 'center', marginTop: 6 }}>
-          <button className="btn-text" type="button" onClick={onDelete}>Delete this round</button>
+          {starter
+            ? <button className="btn-text" type="button" onClick={onDelete}>Delete this round</button>
+            : <button className="btn-text" type="button" onClick={onLeave}>Leave this round</button>}
         </p>
       </div>
     </>

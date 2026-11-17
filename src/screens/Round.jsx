@@ -1,12 +1,15 @@
 import Header from '../Header.jsx';
+import CodeBar from '../CodeBar.jsx';
 import { label, totalText, holeDone, stablefordPoints } from '../scoring.js';
 
 // A score of null means "not entered yet". It shows as par, but is only saved when the
 // player taps + or -, or when the group moves on with "Next hole" / "Finish round".
 // Jumping around the hole strip never fills in scores.
-export default function Round({ round: r, onChange, onNext, onExit }) {
+export default function Round({ round: r, me, onChange, onNext, onExit }) {
   const h = r.hole, par = r.pars[h];
   const last = h === r.pars.length - 1;
+  const starter = r.ownerId === me.uid;
+  const mine = r.claims[me.uid];
 
   function step(p, delta) {
     onChange((x) => {
@@ -27,6 +30,7 @@ export default function Round({ round: r, onChange, onNext, onExit }) {
         </div>
         <p style={{ fontWeight: 800, fontSize: 20 }}>Par {par}</p>
       </div>
+      {starter && r.code && <CodeBar round={r} />}
       <nav className="strip" aria-label="Holes">
         {r.pars.map((_, i) => (
           <button key={i} type="button" className={holeDone(r, i) ? 'done' : ''} aria-current={i === h ? 'true' : undefined}
@@ -42,7 +46,7 @@ export default function Round({ round: r, onChange, onNext, onExit }) {
           return (
             <div key={p} className="prow">
               <div>
-                <div className="pname">{name}</div>
+                <div className="pname">{name}{p === mine && <span className="you">(you)</span>}</div>
                 <div className="ptotal">Total {totalText(r, p)}</div>
               </div>
               <div className="stepper">
@@ -61,7 +65,7 @@ export default function Round({ round: r, onChange, onNext, onExit }) {
       </div>
       <div className="nav">
         <button className="btn btn-ghost" type="button" disabled={h === 0} onClick={() => goTo(h - 1)}>Back</button>
-        <button className="btn btn-primary" type="button" onClick={onNext}>{last ? 'Finish round' : 'Next hole'}</button>
+        <button className="btn btn-primary" type="button" onClick={onNext}>{!last ? 'Next hole' : starter ? 'Finish round' : 'See leaderboard'}</button>
       </div>
       <p style={{ textAlign: 'center', marginTop: 10 }}>
         <button className="btn-text" type="button" onClick={onExit}>Save and exit</button>

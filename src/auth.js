@@ -1,21 +1,25 @@
 import {
-  onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInAnonymously, linkWithPopup, linkWithCredential,
+  EmailAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   updateProfile, sendPasswordResetEmail, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut,
 } from 'firebase/auth';
 import { auth } from './firebase.js';
 
 const LINK_EMAIL = 'fore-birdies-link-email';
 
-// Firebase user -> the few things the app needs.
+// Firebase user -> the few things the app needs. A guest joined a round with a code and has
+// no account (Firebase "anonymous" sign-in).
 export function toUser(u) {
-  if (!u || u.isAnonymous) return null;
+  if (!u) return null;
+  if (u.isAnonymous) return { uid: u.uid, name: u.displayName || 'Guest', email: null, guest: true };
   const name = u.displayName || (u.email ? u.email.split('@')[0] : 'You');
-  return { uid: u.uid, name, email: u.email };
+  return { uid: u.uid, name, email: u.email, guest: false };
 }
 
-// Like onAuthStateChanged, but also fires when a new account gets its name, which Firebase
-// saves a moment after the account is created.
+// Like onAuthStateChanged, but also fires when an account gets its name or a guest becomes
+// a real account. Firebase doesn't report either of those itself.
 const listeners = new Set();
+const tell = (u) => listeners.forEach((cb) => cb(toUser(u)));
 export function watchUser(cb) {
   listeners.add(cb);
   const stop = onAuthStateChanged(auth, (u) => cb(toUser(u)));
@@ -30,9 +34,34 @@ export async function createAccount(name, email, password) {
   const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
   if (name.trim()) {
     await updateProfile(cred.user, { displayName: name.trim() });
-    listeners.forEach((cb) => cb(toUser(cred.user)));
+    tell(cred.user);
   }
   return cred;
+}
+
+export async function signInGuest() {
+  if (auth.currentUser) return toUser(auth.currentUser);
+  return toUser((await signInAnonymously(auth)).user);
+}
+
+// A guest's name is the player they claimed on the card.
+export async function setGuestName(name) {
+  const u = auth.currentUser;
+  if (!u?.isAnonymous) return;
+  await updateProfile(u, { displayName: name });
+  tell(u);
+}
+
+// Turning a guest into a real account keeps the same user, so their rounds come along.
+export async function upgradeGoogle() {
+  const cred = await linkWithPopup(auth.currentUser, new GoogleAuthProvider());
+  tell(cred.user);
+}
+
+export async function upgradeEmail(name, email, password) {
+  const cred = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(email.trim(), password));
+  if (name.trim()) await updateProfile(cred.user, { displayName: name.trim() });
+  tell(cred.user);
 }
 
 export const resetPassword = (email) => sendPasswordResetEmail(auth, email.trim());
@@ -73,6 +102,9 @@ export function authMessage(err) {
     'auth/missing-password': 'Add your password.',
     'auth/weak-password': 'Use at least 6 characters for your password.',
     'auth/email-already-in-use': 'There’s already an account with that email. Sign in instead.',
+    'auth/credential-already-in-use': 'That Google account already has a Fore Birdies account. Sign in with it instead.',
+    'auth/provider-already-linked': 'You already have an account.',
+    'auth/admin-restricted-operation': 'Joining as a guest is switched off. Ask the starter to check Fore Birdies settings.',
     'auth/too-many-requests': 'Too many tries. Wait a few minutes and try again.',
     'auth/popup-closed-by-user': '',
     'auth/cancelled-popup-request': '',

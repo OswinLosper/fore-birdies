@@ -55,7 +55,7 @@ Either of these works and redeploys automatically every time you push to GitHub:
 | Path | What it is |
 |---|---|
 | `src/App.jsx` | Which screen shows, and saving rounds |
-| `src/screens/` | Sign in, Home, New round, Scorecard, Leaderboard |
+| `src/screens/` | Sign in, Home, New round, Join a round, Scorecard, Leaderboard |
 | `src/firebase.js` | Connects to Firebase, with offline saving on |
 | `src/auth.js` | Sign-in: Google, email link, email and password |
 | `src/data.js` | Reading and saving rounds and courses in Firestore, and the one-off import of old phone rounds |
@@ -67,4 +67,4 @@ Either of these works and redeploys automatically every time you push to GitHub:
 | `prototype/` | The original single-file prototype, kept for reference |
 | `plans/` | Handoffs and the roadmap |
 
-Rounds are saved to each person's account in Firebase (Johannesburg) and work offline. Shared rounds with join codes come next; see `plans/backend/BRIEF.md`.
+Rounds are saved to each person's account in Firebase (Johannesburg) and work offline. Mates join a round with its 6-character code or a shared `?join=CODE` link, as guests or with an account. See `plans/backend/BRIEF.md` for how it all works.
