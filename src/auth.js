@@ -105,6 +105,8 @@ export function authMessage(err) {
     'auth/credential-already-in-use': 'That Google account already has a Fore Birdies account. Sign in with it instead.',
     'auth/provider-already-linked': 'You already have an account.',
     'auth/admin-restricted-operation': 'Joining as a guest is switched off. Ask the starter to check Fore Birdies settings.',
+    'auth/unauthorized-domain': 'Sign-in isn’t switched on for this web address yet. Add it under Firebase → Authentication → Settings → Authorized domains.',
+    'auth/operation-not-allowed': 'That way of signing in is switched off in Firebase. Try another one.',
     'auth/too-many-requests': 'Too many tries. Wait a few minutes and try again.',
     'auth/popup-closed-by-user': '',
     'auth/cancelled-popup-request': '',
