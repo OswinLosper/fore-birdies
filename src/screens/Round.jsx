@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Header from '../Header.jsx';
 import CodeBar from '../CodeBar.jsx';
+import Distance from '../Distance.jsx';
 import { label, totalText, holeDone, stablefordPoints } from '../scoring.js';
 
 // A score of null means "not entered yet". It shows as par, but is only saved when the
@@ -40,6 +41,7 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
       </div>
       {stuck && r.code && <p className="sync" role="status">Saved on this phone. Your mates see it once you have signal.</p>}
       {starter && r.code && <CodeBar round={r} />}
+      <Distance round={r} hole={h} me={me} />
       <nav className="strip" aria-label="Holes">
         {r.pars.map((_, i) => (
           <button key={i} type="button" className={holeDone(r, i) ? 'done' : ''} aria-current={i === h ? 'true' : undefined}

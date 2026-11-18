@@ -9,7 +9,8 @@
     "emulators": "firebase emulators:start --only auth,firestore --project demo-fore-birdies",
     "build": "vite build",
     "preview": "vite preview --host",
-    "icons": "pwa-assets-generator"
+    "icons": "pwa-assets-generator",
+    "courses": "node scripts/build-courses.mjs"
   },
   "dependencies": {
     "firebase": "13.4.0",

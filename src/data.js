@@ -7,9 +7,12 @@ import { fill } from './storage.js';
 
 // Firestore layout
 //   rounds/{id}                 { ownerId, memberIds[], memberNames{uid:name}, claims{uid:player},
-//                                 code, course, pars[], format, players[], scores{}, done, date }
+//                                 code, course, courseRef?, pars[], format, players[], scores{}, done, date }
 //   codes/{CODE}                { roundId, ownerId }   so mates can find a round by its join code
-//   users/{uid}/courses/{id}    { name, pars[] }
+//   users/{uid}/courses/{id}    { name, pars[], courseRef? }
+// courseRef is the course's id on the South African course list (public/courses), for distances.
+//   greens/{courseKey}/holes/{n} { lat, lon, by, byName, at }   a green a player saved by standing on it,
+//                                 shared with everyone who plays that course (see greenKey)
 // Each score is its own field, "scores.p{player}h{hole}" = { s, by, byName }, so two phones
 // changing different scores never clash, and the same score resolves to the last save.
 // Which hole you're on and which birdies were cheered belong to this phone only (localStorage).
@@ -35,7 +38,7 @@ function toRound(id, d, ui, pending = false) {
   const by = d.players.map((_, p) => d.pars.map((__, h) => (cell(p, h) ? { uid: cell(p, h).by, name: cell(p, h).byName } : null)));
   return {
     id, ownerId: d.ownerId, code: d.code || null, claims: d.claims || {}, memberNames: d.memberNames || {},
-    course: d.course, pars: d.pars, format: d.format, players: d.players,
+    course: d.course, courseRef: d.courseRef || null, pars: d.pars, format: d.format, players: d.players,
     scores, by, pending, done: !!d.done, date: d.date,
     hole: Math.min(ui?.hole ?? 0, d.pars.length - 1), cheered: ui?.cheered || {},
   };
@@ -67,7 +70,7 @@ function scoreEntries(scores, user) {
 const queued = (promise) => { promise.catch((err) => console.error('save', err)); };
 
 export function saveCourse(uid, course) {
-  queued(setDoc(doc(db, 'users', uid, 'courses', course.id), { name: course.name, pars: course.pars }));
+  queued(setDoc(doc(db, 'users', uid, 'courses', course.id), { name: course.name, pars: course.pars, courseRef: course.courseRef || null }));
 }
 
 export function newRoundId() {
@@ -85,7 +88,7 @@ export function createRound(user, r) {
   const batch = writeBatch(db);
   batch.set(doc(db, 'rounds', r.id), {
     ownerId: user.uid, memberIds: [user.uid], memberNames: { [user.uid]: user.name }, claims: r.claims,
-    code: r.code, course: r.course, pars: r.pars, format: r.format,
+    code: r.code, course: r.course, courseRef: r.courseRef || null, pars: r.pars, format: r.format,
     players: r.players, scores: {}, done: false, date: r.date, createdAt: serverTimestamp(),
   });
   batch.set(doc(db, 'codes', r.code), { roundId: r.id, ownerId: user.uid });
@@ -168,4 +171,31 @@ export function importLocal(user, local) {
   queued(batch.commit());
   try { localStorage.setItem(flag, String(Date.now())); } catch (e) {}
   return rounds.length;
+}
+
+// Which course saved greens belong to: its id on the course list, or else its typed name,
+// so everyone who types the same name shares them.
+export function greenKey(round) {
+  if (round.courseRef) return round.courseRef;
+  const name = round.course.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+  return name ? 'n-' + name : null;
+}
+
+// { "7": { green: [[lat, lon]], by, byName }, ... }. Works offline from what this phone saw last.
+export function watchGreens(key, onGreens) {
+  return onSnapshot(collection(db, 'greens', key, 'holes'), (snap) => {
+    const out = {};
+    snap.docs.forEach((x) => {
+      const g = x.data();
+      out[x.id] = { green: [[g.lat, g.lon]], by: g.by, byName: g.byName };
+    });
+    onGreens(out);
+  }, (err) => console.error('greens', err));
+}
+
+// Newest save wins. Queues on the phone with no signal.
+export function saveGreen(user, key, hole, [lat, lon]) {
+  queued(setDoc(doc(db, 'greens', key, 'holes', String(hole)), {
+    lat, lon, by: user.uid, byName: user.name, at: serverTimestamp(),
+  }));
 }
