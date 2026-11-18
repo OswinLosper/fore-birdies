@@ -176,7 +176,7 @@ export default function Distance({ round, hole, me }) {
         <Suspense fallback={<div className="holemap"><p className="hm-banner">Loading the map…</p></div>}>
           <HoleMap
             round={round} hole={hole} par={round.pars[hole]} fix={fix} units={units} canSave={canSave}
-            data={{ green, tee: fromMap?.tee, fromMap: !!fromMap }}
+            data={{ green, tee: fromMap?.tee, len: fromMap?.len, fromMap: !!fromMap }}
             nearOther={nextTo} onSave={store} onClose={() => setMapOpen(false)}
           />
         </Suspense>

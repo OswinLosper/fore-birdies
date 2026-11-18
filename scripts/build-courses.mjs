@@ -1,7 +1,8 @@
 // Builds the South African course list from OpenStreetMap into public/courses/.
 //   index.json   every named course: { id, name, lat, lon, greens }
-//   <id>.json    courses with mapped greens: { id, name, holes: { "1": { par?, tee, green: [[lat, lon], ...] } } }
-//                tee is where the hole line starts, so the hole map can turn tee-to-green.
+//   <id>.json    courses with mapped greens: { id, name, holes: { "1": { par?, tee, len, green: [[lat, lon], ...] } } }
+//                tee is where the hole line starts, so the hole map can turn tee-to-green;
+//                len is the hole's length in metres along that line, tee to green.
 // Run with: npm run courses. The free OSM servers are often busy, so it retries.
 // The raw download is kept in scripts/.osm-za.json; `npm run courses -- --cached` rebuilds from it.
 // A green is only kept when OSM says which hole it belongs to; never guessed.
@@ -118,7 +119,7 @@ for (const h of holes) {
   const refs = seen.get(course.id);
   refs.set(ref, (refs.get(ref) || 0) + 1);
   const par = parseInt(h.tags.par, 10);
-  out.get(course.id)[ref] = { ...(par >= 3 && par <= 6 ? { par } : {}), tee: pt(h.geometry[0]), green: slim(green) };
+  out.get(course.id)[ref] = { ...(par >= 3 && par <= 6 ? { par } : {}), tee: pt(h.geometry[0]), len: Math.round(h.geometry.slice(1).reduce((m, p, i) => m + metres(pt(h.geometry[i]), pt(p)), 0)), green: slim(green) };
 }
 
 for (const c of courses) {
