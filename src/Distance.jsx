@@ -1,6 +1,18 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { toGreen, getUnits, setUnits, inUnits, courseHoles, metres, centre } from './geo.js';
 import { greenKey, watchGreens, saveGreen } from './data.js';
+
+// The satellite hole map (and its map library) only downloads when someone opens it.
+// With no signal the download fails, so say so instead of breaking the round screen.
+const HoleMap = lazy(() => import('./HoleMap.jsx').catch(() => ({
+  default: ({ onClose }) => (
+    <div className="holemap">
+      <p className="hm-banner">The map needs signal. Distances still work on the scores screen.</p>
+      <div className="hm-bottom"><button className="btn hm-btn-ghost" type="button" onClick={onClose}>Back to scores</button></div>
+    </div>
+  ),
+})));
+const MAP = !!import.meta.env.VITE_ESRI_KEY;
 
 // Distances turn on once per phone. After that the app follows your position while a round is open.
 const GPS_ON = 'fore-birdies-gps';
@@ -29,6 +41,7 @@ export default function Distance({ round, hole, me }) {
   const [warn, setWarn] = useState('');
   // Set when the save is next to another hole's green and needs a second tap.
   const [nearOther, setNearOther] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -42,7 +55,7 @@ export default function Distance({ round, hole, me }) {
     return key ? watchGreens(key, setSaved) : undefined;
   }, [key]);
 
-  useEffect(() => { setSaving(false); setWarn(''); setNearOther(false); }, [hole]);
+  useEffect(() => { setSaving(false); setWarn(''); setNearOther(false); setMapOpen(false); }, [hole]);
 
   useEffect(() => {
     if (!on) return undefined;
@@ -69,18 +82,27 @@ export default function Distance({ round, hole, me }) {
   const turnOn = () => { try { localStorage.setItem(GPS_ON, 'on'); } catch (e) {} setOn(true); };
   const good = fix && fix.acc <= ROUGH;
 
+  // Another hole's green right next to this spot, if any: probably the wrong green.
+  function nextTo(at) {
+    const all = { ...saved, ...mapped };
+    return Object.keys(all).find((h) => h !== n && metres(at, centre(all[h].green)) < SAME_GREEN) || null;
+  }
+  // Saved by standing on the green or by tapping it on the hole map. Newest save wins.
+  function store(at) {
+    saveGreen(me, key, hole + 1, at);
+    setSaved((s) => ({ ...s, [n]: { green: [at], by: me.uid, byName: me.name } }));
+  }
+
   function save(force) {
     if (!fix || fix.acc > SAVE_FIX) {
       setWarn('Wait for a better GPS fix (±' + inUnits(SAVE_FIX, units) + ' ' + u + ' or better), then save.');
       return;
     }
     if (!force) {
-      const all = { ...saved, ...mapped };
-      const near = Object.keys(all).find((h) => h !== n && metres(fix.at, centre(all[h].green)) < SAME_GREEN);
+      const near = nextTo(fix.at);
       if (near) { setWarn('That’s right next to hole ' + near + '’s green. Is it the same green?'); setNearOther(true); return; }
     }
-    saveGreen(me, key, hole + 1, fix.at);
-    setSaved((s) => ({ ...s, [n]: { green: [fix.at], by: me.uid, byName: me.name } }));
+    store(fix.at);
     setSaving(false);
     setWarn('');
     setNearOther(false);
@@ -139,10 +161,25 @@ export default function Distance({ round, hole, me }) {
         </button>
       </div>
       {body}
+      {MAP && !saving && (
+        <button className="btn btn-ghost btn-block" type="button" style={{ marginTop: 8 }}
+          onClick={() => { if (!on) turnOn(); setMapOpen(true); }}>
+          Hole map
+        </button>
+      )}
       {on && canSave && !saving && (
         <button className="btn-text" type="button" onClick={() => setSaving(true)}>
           {fromPlayer ? 'Fix this green' : 'Save this green'}
         </button>
+      )}
+      {mapOpen && (
+        <Suspense fallback={<div className="holemap"><p className="hm-banner">Loading the map…</p></div>}>
+          <HoleMap
+            round={round} hole={hole} par={round.pars[hole]} fix={fix} units={units} canSave={canSave}
+            data={{ green, tee: fromMap?.tee, fromMap: !!fromMap }}
+            nearOther={nextTo} onSave={store} onClose={() => setMapOpen(false)}
+          />
+        </Suspense>
       )}
       <p className="hint">
         {good && green && !saving && <>GPS ±{inUnits(fix.acc, units)} {u}. </>}

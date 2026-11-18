@@ -27,6 +27,8 @@ export default defineConfig({
       workbox: {
         // The course list and its greens too, so distances work with no signal on the course.
         globPatterns: ['**/*.{js,css,html,svg,png,ico}', 'courses/*.json'],
+        // The hole map needs signal for its photos anyway, so its map library isn't stored offline.
+        globIgnores: ['**/HoleMap-*'],
         // Cache the Google Fonts so the app still looks right with no signal on the course.
         runtimeCaching: [
           {
