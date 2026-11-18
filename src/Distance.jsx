@@ -115,7 +115,12 @@ export default function Distance({ round, hole, me }) {
   } else {
     const d = toGreen(fix.at, green);
     body = d.middle > TOO_FAR
-      ? <p className="muted">You’re {inUnits(d.middle, units)} {u} from this green.</p>
+      ? (
+        <p className="muted">
+          You’re {d.middle >= 1000 ? (d.middle / 1000).toFixed(1) + ' km' : inUnits(d.middle, units) + ' ' + u} from this green.
+          {' '}Distances show once you’re on the course.
+        </p>
+      )
       : (
         <div className="dist-row" aria-label="Distance to the green">
           {d.front != null && <div><span>Front</span><b>{inUnits(d.front, units)}</b></div>}
