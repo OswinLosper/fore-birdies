@@ -164,3 +164,7 @@ input.code-input{font-family:'Fredoka',system-ui,sans-serif;font-size:28px;lette
 .dist-row b { font-size: 26px; font-weight: 800; }
 .dist-row .mid b { font-size: 40px; }
 .dist a { color: inherit; }
+
+/* Saved courses: Edit mode */
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.chip-remove { border-color: var(--coral); color: var(--coral); }

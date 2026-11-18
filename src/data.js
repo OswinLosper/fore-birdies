@@ -73,6 +73,11 @@ export function saveCourse(uid, course) {
   queued(setDoc(doc(db, 'users', uid, 'courses', course.id), { name: course.name, pars: course.pars, courseRef: course.courseRef || null }));
 }
 
+// Only takes it off your saved courses: rounds played there and saved greens stay.
+export function deleteCourse(uid, id) {
+  queued(deleteDoc(doc(db, 'users', uid, 'courses', id)));
+}
+
 export function newRoundId() {
   return doc(collection(db, 'rounds')).id;
 }
