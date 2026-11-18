@@ -25,7 +25,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        // The course list and its greens too, so distances work with no signal on the course.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}', 'courses/*.json'],
         // Cache the Google Fonts so the app still looks right with no signal on the course.
         runtimeCaching: [
           {

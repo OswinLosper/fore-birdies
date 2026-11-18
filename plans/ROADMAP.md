@@ -8,8 +8,12 @@
 - [ ] Accounts, rounds saved to a profile, live shared rounds with join codes (choose Supabase or Firebase first)
 - [ ] Offline-first score saving that syncs when signal returns
 
-## Version 2 ideas
-- Course database with GPS distance to the green. Use OpenStreetMap where a course is mapped, and let players pin greens where it isn't (needs the backend). Check OSM coverage of South African courses first.
+## Version 2 (now)
+- [x] GPS distance to the green: OpenStreetMap greens where mapped, players save the rest (see `plans/distance/BRIEF.md`)
+- [ ] Test distances on a real course, mapped and unmapped, on Android and iPhone
+
+## Later ideas
+- Measure my shot; hazards and layups; a satellite map to save greens from
 - Crews, side games (skins, Nassau), bragging stats, reactions
 - Handicaps and stroke index for Stableford
 - App store versions via Capacitor (Google Play US$25 once, Apple US$99 a year)

@@ -71,12 +71,12 @@ export default function App() {
     const name = d.course.trim();
     const players = d.players.map((p) => p.trim()).filter(Boolean);
     const existing = courses.find((c) => c.name.toLowerCase() === name.toLowerCase());
-    saveCourse(user.uid, { id: existing ? existing.id : uid(), name, pars: d.pars.slice() });
+    saveCourse(user.uid, { id: existing ? existing.id : uid(), name, pars: d.pars.slice(), courseRef: d.courseRef });
     // The starter is the first player when that's their own name.
     const claims = players[0] === user.name ? { [user.uid]: 0 } : {};
     const r = {
       id: newRoundId(), code: newCode(), ownerId: user.uid, claims, memberNames: { [user.uid]: user.name },
-      course: name, pars: d.pars.slice(), format: d.format, players,
+      course: name, courseRef: d.courseRef || null, pars: d.pars.slice(), format: d.format, players,
       scores: players.map(() => d.pars.map(() => null)), by: players.map(() => d.pars.map(() => null)),
       hole: 0, done: false, date: Date.now(), cheered: {},
     };
