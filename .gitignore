@@ -5,3 +5,4 @@ dev-dist
 *.local
 firestore-debug.log
 *-debug.log
+scripts/.osm-za.json
