@@ -194,3 +194,4 @@ input.code-input{font-family:'Fredoka',system-ui,sans-serif;font-size:28px;lette
 .hm-chip { font-size: 13px; font-weight: 800; background: rgba(15,26,20,.88); color: #fff; border-radius: 12px; padding: 4px 9px; white-space: nowrap; }
 .hm-chip-green { background: #F2C230; color: #1C2A21; }
 .holemap .maplibregl-ctrl-attrib { display: none; }
+.hm-away { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(0,0,0,.1); }

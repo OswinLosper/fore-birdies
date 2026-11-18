@@ -18,6 +18,25 @@ function bearing([a, b], [c, d]) {
   const x = Math.cos(a * rad) * Math.sin(c * rad) - Math.sin(a * rad) * Math.cos(c * rad) * Math.cos((d - b) * rad);
   return Math.atan2(y, x) / rad;
 }
+// Fit points on screen as the map will show them, turned to `turn` degrees, leaving room for the
+// cards at the top and the buttons at the bottom. (Fitting a north-up box and then turning the map
+// zooms diagonal holes right out.)
+const PAD = { top: 150, bottom: 90, side: 18 };
+function frame(points, turn, width, height) {
+  const o = points[0], k = Math.cos(o[0] * rad), t = turn * rad;
+  const up = ([la, lo]) => { const x = (lo - o[1]) * rad * 6371000 * k, y = (la - o[0]) * rad * 6371000; return [x * Math.sin(t) + y * Math.cos(t), x * Math.cos(t) - y * Math.sin(t)]; };
+  const pts = points.map(up);
+  const a0 = Math.min(...pts.map((p) => p[0])), a1 = Math.max(...pts.map((p) => p[0]));
+  const c0 = Math.min(...pts.map((p) => p[1])), c1 = Math.max(...pts.map((p) => p[1]));
+  const boxH = Math.max(100, height - PAD.top - PAD.bottom), boxW = Math.max(100, width - 2 * PAD.side);
+  const mpp = Math.max((a1 - a0) / boxH, (c1 - c0) / boxW, 0.4);
+  const zoom = Math.min(18.5, Math.log2((40075016.686 * k) / (512 * mpp)));
+  const real = (40075016.686 * k) / (512 * 2 ** zoom);
+  // The middle of the box sits lower than the middle of the screen (cards are taller than buttons).
+  const along = (a0 + a1) / 2 + ((PAD.top - PAD.bottom) / 2) * real, across = (c0 + c1) / 2;
+  const x = across * Math.cos(t) + along * Math.sin(t), y = -across * Math.sin(t) + along * Math.cos(t);
+  return { center: [o[1] + x / (rad * 6371000 * k), o[0] + y / (rad * 6371000)], zoom, bearing: turn };
+}
 const el = (cls, html = '') => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d; };
 const FLAG = '<svg width="34" height="44" viewBox="0 0 34 44" aria-hidden="true"><ellipse cx="6" cy="41" rx="6" ry="3" fill="rgba(0,0,0,.45)"/><path d="M6 41V3" stroke="#fff" stroke-width="3"/><path d="M7 3l24 7-24 7z" fill="#F2C230"/></svg>';
 
@@ -46,16 +65,13 @@ export default function HoleMap({ round, hole, par, data, fix, units, canSave, n
     let cancelled = false;
     (async () => {
       let view;
-      if (green && data.tee) {
-        const b = new maplibregl.LngLatBounds();
-        [data.tee, ...green].forEach((p) => b.extend(ll(p)));
-        if (here && metres(here, mid) < NEAR) b.extend(ll(here));
-        view = { bounds: b, bearing: bearing(data.tee, mid) };
+      // On the hole: frame you and the green, so the map zooms in as you get closer.
+      // Away from it: the whole hole, tee to green.
+      const onHole = here && green && metres(here, mid) < NEAR;
+      if (green && (data.tee || onHole)) {
+        view = { points: [...(onHole ? [here] : [data.tee]), ...green], bearing: bearing(onHole && !data.tee ? here : data.tee, mid) };
       } else if (green) {
-        const b = new maplibregl.LngLatBounds();
-        green.forEach((p) => b.extend(ll(p)));
-        if (here && metres(here, mid) < NEAR) b.extend(ll(here)); else view = { center: ll(mid), zoom: 17.5 };
-        view ||= { bounds: b };
+        view = { center: ll(mid), zoom: 17.5 };
       } else {
         const listed = round.courseRef && (await courseIndex()).find((c) => c.id === round.courseRef);
         const spot = here && (!listed || metres(here, [listed.lat, listed.lon]) < 3000) ? here : listed && [listed.lat, listed.lon];
@@ -72,7 +88,7 @@ export default function HoleMap({ round, hole, par, data, fix, units, canSave, n
           sources: { photo: { type: 'raster', tiles: [TILES], tileSize: 256, maxzoom: 19 } },
           layers: [{ id: 'photo', type: 'raster', source: 'photo' }],
         },
-        center: view.center || view.bounds.getCenter(),
+        center: view.center || ll(mid),
         zoom: view.zoom || 16,
         bearing: view.bearing || 0,
         maxZoom: 20,
@@ -82,11 +98,7 @@ export default function HoleMap({ round, hole, par, data, fix, units, canSave, n
       m.on('load', () => {
         // Frame the hole once the map knows its own size.
         m.resize();
-        if (view.bounds) {
-          try {
-            m.fitBounds(view.bounds, { bearing: view.bearing || 0, padding: { top: 170, bottom: 130, left: 40, right: 40 }, duration: 0, maxZoom: 18.5 });
-          } catch (e) { m.jumpTo({ center: view.bounds.getCenter(), zoom: 17, bearing: view.bearing || 0 }); }
-        }
+        if (view.points) m.jumpTo(frame(view.points, view.bearing, box.current.clientWidth, box.current.clientHeight));
         m.addSource('lines', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
         m.addLayer({ id: 'outline', type: 'line', source: 'lines', filter: ['==', ['get', 'kind'], 'outline'], paint: { 'line-color': '#fff', 'line-width': 2, 'line-opacity': 0.85 } });
         m.addLayer({ id: 'to-tap', type: 'line', source: 'lines', filter: ['==', ['get', 'kind'], 'me'], paint: { 'line-color': '#fff', 'line-width': 3, 'line-dasharray': [2, 1.5] } });
@@ -155,11 +167,9 @@ export default function HoleMap({ round, hole, par, data, fix, units, canSave, n
     card = <div className="hm-card hm-note"><b>{green ? 'Fixing this green' : 'No green saved yet'}</b><small>Tap the middle of the green on the photo</small></div>;
   } else if (!green) {
     card = <div className="hm-card hm-note"><b>No green saved yet</b><small>{canSave ? 'Tap below to save it' : 'Someone with an account can save it'}</small></div>;
-  } else if (here) {
+  } else if (here && toGreen(here, green).middle <= 700) {
     const d = toGreen(here, green);
-    card = d.middle > 700
-      ? <div className="hm-card hm-note"><b>{d.middle >= 1000 ? (d.middle / 1000).toFixed(1) + ' km' : inUnits(d.middle, units) + ' ' + u}</b><small>from this green</small></div>
-      : (
+    card = (
         <div className="hm-card hm-dist" aria-label="Distance to the green">
           {d.front != null && <div className="hm-fb"><span>Front<b>{inUnits(d.front, units)}</b></span><span>Back<b>{inUnits(d.back, units)}</b></span></div>}
           <div className="hm-mid">{inUnits(d.middle, units)}</div>
@@ -167,7 +177,19 @@ export default function HoleMap({ round, hole, par, data, fix, units, canSave, n
         </div>
       );
   } else {
-    card = <div className="hm-card hm-note"><b>Looking for GPS…</b><small>Tap the photo for distances to the green</small></div>;
+    // Not on the hole (or no GPS yet): the hole's length, like a scorecard, when the map data has it.
+    const away = here && metres(here, mid);
+    const where = away ? 'You’re ' + (away >= 1000 ? (away / 1000).toFixed(1) + ' km' : inUnits(away, units) + ' ' + u) + ' away' : 'Looking for GPS…';
+    card = data.len
+      ? (
+        <div className="hm-card hm-dist" aria-label="Length of this hole">
+          <small>Hole length</small>
+          <div className="hm-mid">{inUnits(data.len, units)}</div>
+          <small>{u === 'm' ? 'metres' : 'yards'}, tee to green</small>
+          <small className="hm-away">{where}</small>
+        </div>
+      )
+      : <div className="hm-card hm-note"><b>{away ? where.replace('You’re ', '').replace(' away', '') : 'Looking for GPS…'}</b><small>{away ? 'from this green' : 'Tap the photo for distances to the green'}</small></div>;
   }
 
   return (
