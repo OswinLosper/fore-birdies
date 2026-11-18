@@ -16,13 +16,20 @@ const CHIP_X = (
   </svg>
 );
 
-export default function Setup({ courses, you, onTeeOff, onCancel }) {
+export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse }) {
   const [d, setD] = useState({ courseId: null, courseRef: null, course: '', pars: fill(18, 4), format: 'stroke', players: [you || 'You', ''] });
   const [error, setError] = useState('');
   // The South African course list, and the courses near you once you ask.
   const [list, setList] = useState([]);
   const [near, setNear] = useState(null);
   const [finding, setFinding] = useState(false);
+  // Edit mode puts a remove button on each saved course.
+  const [editing, setEditing] = useState(false);
+  // A removed course can't stay picked.
+  useEffect(() => {
+    if (d.courseId && !courses.some((c) => c.id === d.courseId)) set({ courseId: null, courseRef: null, course: '', pars: fill(18, 4) });
+    if (!courses.length) setEditing(false);
+  }, [courses]);
   useEffect(() => { courseIndex().then(setList); }, []);
   const set = (patch) => setD((old) => ({ ...old, ...patch }));
   const focusNew = useRef(false);
@@ -85,15 +92,24 @@ export default function Setup({ courses, you, onTeeOff, onCancel }) {
         <h1>New round</h1>
         {courses.length > 0 && (
           <div className="stack">
-            <p className="hint">{d.courseId ? 'Saved courses. Tap it again to start a new course instead.' : 'Saved courses'}</p>
+            <div className="row-between">
+              <p className="hint">{editing ? 'Tap a course to remove it.' : d.courseId ? 'Saved courses. Tap it again to start a new course instead.' : 'Saved courses'}</p>
+              <button className="btn-text" type="button" onClick={() => setEditing(!editing)}>{editing ? 'Done' : 'Edit'}</button>
+            </div>
             <div className="chips">
-              {courses.map((c) => (
+              {courses.map((c) => (editing ? (
+                <button key={c.id} className="chip chip-remove" type="button" aria-label={'Remove ' + c.name}
+                  onClick={() => onRemoveCourse(c)}>
+                  {c.name}
+                  {CHIP_X}
+                </button>
+              ) : (
                 <button key={c.id} className="chip" type="button" aria-pressed={d.courseId === c.id}
                   onClick={() => pickCourse(c)}>
                   {c.name}
                   {d.courseId === c.id && CHIP_X}
                 </button>
-              ))}
+              )))}
             </div>
           </div>
         )}

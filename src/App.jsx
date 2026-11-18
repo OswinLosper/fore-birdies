@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { watchUser, finishLinkSignIn, logOut } from './auth.js';
 import { load, uid } from './storage.js';
 import {
-  watchRounds, watchCourses, saveCourse, newRoundId, newCode, createRound, saveRoundChanges, deleteRoundDoc,
+  watchRounds, watchCourses, saveCourse, deleteCourse, newRoundId, newCode, createRound, saveRoundChanges, deleteRoundDoc,
   importLocal, saveUi, leaveRound,
 } from './data.js';
 import Home from './screens/Home.jsx';
@@ -135,6 +135,13 @@ export default function App() {
     });
   }
 
+  function removeCourse(c) {
+    setAsking({
+      title: 'Remove ' + c.name + '?', text: 'It comes off your saved courses. Rounds you played there stay.', yes: 'Remove',
+      then: () => deleteCourse(user.uid, c.id),
+    });
+  }
+
   function openJoined(id) {
     setRoundId(id);
     go('round');
@@ -161,7 +168,7 @@ export default function App() {
   } else if (view === 'upgrade' && user.guest) {
     screen = <SignIn upgrade guestName={user.name} onCancel={() => go('home')} />;
   } else if (view === 'setup' && !user.guest) {
-    screen = <Setup courses={courses} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')} />;
+    screen = <Setup courses={courses} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')} onRemoveCourse={removeCourse} />;
   } else if (view === 'round' && round) {
     screen = <Round round={round} me={user} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')} />;
   } else if (view === 'summary' && round) {
