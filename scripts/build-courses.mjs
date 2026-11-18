@@ -1,10 +1,11 @@
 // Builds the South African course list from OpenStreetMap into public/courses/.
 //   index.json   every named course: { id, name, lat, lon, greens }
-//   <id>.json    courses with mapped greens: { id, name, holes: { "1": { par?, green: [[lat, lon], ...] } } }
+//   <id>.json    courses with mapped greens: { id, name, holes: { "1": { par?, tee, green: [[lat, lon], ...] } } }
+//                tee is where the hole line starts, so the hole map can turn tee-to-green.
 // Run with: npm run courses. The free OSM servers are often busy, so it retries.
 // The raw download is kept in scripts/.osm-za.json; `npm run courses -- --cached` rebuilds from it.
 // A green is only kept when OSM says which hole it belongs to; never guessed.
-import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 
 const CACHE = 'scripts/.osm-za.json';
 
@@ -117,7 +118,7 @@ for (const h of holes) {
   const refs = seen.get(course.id);
   refs.set(ref, (refs.get(ref) || 0) + 1);
   const par = parseInt(h.tags.par, 10);
-  out.get(course.id)[ref] = { ...(par >= 3 && par <= 6 ? { par } : {}), green: slim(green) };
+  out.get(course.id)[ref] = { ...(par >= 3 && par <= 6 ? { par } : {}), tee: pt(h.geometry[0]), green: slim(green) };
 }
 
 for (const c of courses) {
@@ -140,6 +141,13 @@ for (const c of courses) {
 
 // The last list, so ids that rounds and saved courses already point at keep working.
 const before = await readFile('public/courses/index.json', 'utf8').then(JSON.parse).catch(() => []);
+// Old ids already pointing at another course (file name -> the course id inside it).
+const aliases = new Map();
+for (const f of await readdir('public/courses').catch(() => [])) {
+  if (f === 'index.json') continue;
+  const inside = JSON.parse(await readFile(`public/courses/${f}`, 'utf8')).id;
+  if (inside !== f.replace('.json', '')) aliases.set(f.replace('.json', ''), inside);
+}
 await rm('public/courses', { recursive: true, force: true });
 await mkdir('public/courses', { recursive: true });
 const index = [];
@@ -161,6 +169,12 @@ for (const g of groups) {
 // A course OSM redrew gets a new id. Point the old id at the new course, but only when exactly
 // one course with greens is within 1.5 km, so it's never pointed at the wrong club.
 let kept = 0;
+const written = new Set((await readdir('public/courses')).map((f) => f.replace('.json', '')));
+for (const [oldId, target] of aliases) {
+  if (written.has(oldId) || !written.has(target)) continue;
+  await writeFile(`public/courses/${oldId}.json`, await readFile(`public/courses/${target}.json`, 'utf8'));
+  kept++;
+}
 for (const c of before) {
   if (!c.greens || index.some((x) => x.id === c.id)) continue;
   const near = index.filter((x) => x.greens && metres([c.lat, c.lon], [x.lat, x.lon]) < 1500);

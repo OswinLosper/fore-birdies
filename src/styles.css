@@ -168,3 +168,29 @@ input.code-input{font-family:'Fredoka',system-ui,sans-serif;font-size:28px;lette
 /* Saved courses: Edit mode */
 .row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .chip-remove { border-color: var(--coral); color: var(--coral); }
+
+/* Hole map: full screen over the round */
+.holemap { position: fixed; inset: 0; z-index: 50; background: #0F1A14; }
+.holemap .hm-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hm-top { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
+.hm-card { background: rgba(255,255,255,.95); color: #1C2A21; border-radius: 16px; padding: 10px 14px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.hm-hole span { display: block; font-size: 13px; font-weight: 700; color: #4E5F54; }
+.hm-hole b { display: block; font-family: 'Fredoka', system-ui, sans-serif; font-size: 28px; line-height: 1.05; }
+.hm-dist { text-align: center; min-width: 124px; }
+.hm-dist small, .hm-note small { display: block; font-size: 12px; font-weight: 700; color: #4E5F54; }
+.hm-fb { display: flex; justify-content: space-between; gap: 14px; font-size: 13px; font-weight: 700; color: #4E5F54; }
+.hm-fb b { display: block; font-size: 18px; color: #1C2A21; }
+.hm-mid { font-family: 'Fredoka', system-ui, sans-serif; font-size: 44px; font-weight: 600; line-height: 1; color: #1F5D3A; }
+.hm-note { max-width: 170px; font-weight: 800; font-size: 15px; }
+.hm-banner { position: absolute; left: 12px; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 106px); margin: 0; background: rgba(15,26,20,.88); color: #fff; border-radius: 14px; padding: 10px 14px; font-weight: 700; font-size: 14px; }
+.hm-credit { position: absolute; left: 12px; right: 12px; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 60px); margin: 0; font-size: 9px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.hm-bottom { position: absolute; left: 12px; right: 12px; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; gap: 8px; }
+.hm-bottom .btn { flex: 1; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.hm-btn-ghost { background: rgba(255,255,255,.95); color: #1C2A21; }
+.hm-me { width: 16px; height: 16px; border-radius: 50%; background: #2F6FD6; border: 3px solid #fff; box-shadow: 0 0 0 7px rgba(47,111,214,.3); }
+.hm-tap { width: 12px; height: 12px; border-radius: 50%; background: #F2C230; border: 3px solid #fff; }
+.hm-pin-wrap { padding-bottom: 6px; }
+.hm-pin { width: 26px; height: 26px; background: #F2C230; border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.hm-chip { font-size: 13px; font-weight: 800; background: rgba(15,26,20,.88); color: #fff; border-radius: 12px; padding: 4px 9px; white-space: nowrap; }
+.hm-chip-green { background: #F2C230; color: #1C2A21; }
+.holemap .maplibregl-ctrl-attrib { display: none; }
