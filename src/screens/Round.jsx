@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Header from '../Header.jsx';
 import CodeBar from '../CodeBar.jsx';
 import Distance from '../Distance.jsx';
-import { label, totalText, holeDone, stablefordPoints } from '../scoring.js';
+import { label, totalText, holeDone, stablefordPoints, received, pts } from '../scoring.js';
 
 // A score of null means "not entered yet". It shows as par, but is only saved when the
 // player taps + or -, or when the group moves on with "Next hole" / "Finish round".
@@ -37,7 +37,10 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
           <p className="muted" style={{ fontWeight: 700 }}>{r.course}</p>
           <p className="hole-num">Hole {h + 1}</p>
         </div>
-        <p style={{ fontWeight: 800, fontSize: 20 }}>Par {par}</p>
+        <p style={{ fontWeight: 800, fontSize: 20, textAlign: 'right' }}>
+          Par {par}
+          {r.si?.[h] != null && <span className="muted" style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>Stroke index {r.si[h]}</span>}
+        </p>
       </div>
       {stuck && r.code && <p className="sync" role="status">Saved on this phone. Your mates see it once you have signal.</p>}
       {starter && r.code && <CodeBar round={r} />}
@@ -56,11 +59,16 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
           const s = pending ? par : r.scores[p][h];
           // Someone else's phone set this score last, so say who. Matters when two phones disagree.
           const by = r.by[p][h];
+          // Handicap strokes this player gets here, shown as dots like on a club scorecard.
+          const extra = received(r, p, h);
           const other = !pending && by && by.uid !== me.uid ? by.name : null;
           return (
             <div key={p} className="prow">
               <div>
-                <div className="pname">{name}{p === mine && <span className="you">(you)</span>}</div>
+                <div className="pname">
+                  {name}{p === mine && <span className="you">(you)</span>}
+                  {extra > 0 && <span className="dots" aria-label={'gets ' + extra + (extra === 1 ? ' stroke' : ' strokes') + ' here'}>{'●'.repeat(extra)}</span>}
+                </div>
                 <div className="ptotal">Total {totalText(r, p)}</div>
               </div>
               <div className="stepper">
@@ -71,7 +79,7 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
               <div className={'tag' + (!pending && s < par ? ' good' : '')}>
                 {pending
                   ? 'Par unless you change it'
-                  : label(s, par) + (r.format === 'stableford' ? ', ' + stablefordPoints(s, par) + ' pts' : '')}
+                  : label(s, par) + (r.format === 'stableford' ? ', ' + pts(stablefordPoints(s, par, extra)) : extra ? ', net ' + (s - extra) : '')}
                 {other && <span className="changed">Changed by {other}</span>}
               </div>
             </div>

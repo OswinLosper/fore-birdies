@@ -2,7 +2,8 @@
 //   index.json   every named course: { id, name, lat, lon, greens }
 //   <id>.json    courses with mapped greens: { id, name, holes: { "1": { par?, tee, len, green: [[lat, lon], ...] } } }
 //                tee is where the hole line starts, so the hole map can turn tee-to-green;
-//                len is the hole's length in metres along that line, tee to green.
+//                len is the hole's length in metres along that line, tee to green;
+//                si is the stroke index, kept only when the course's numbers are each used once.
 // Run with: npm run courses. The free OSM servers are often busy, so it retries.
 // The raw download is kept in scripts/.osm-za.json; `npm run courses -- --cached` rebuilds from it.
 // A green is only kept when OSM says which hole it belongs to; never guessed.
@@ -119,7 +120,8 @@ for (const h of holes) {
   const refs = seen.get(course.id);
   refs.set(ref, (refs.get(ref) || 0) + 1);
   const par = parseInt(h.tags.par, 10);
-  out.get(course.id)[ref] = { ...(par >= 3 && par <= 6 ? { par } : {}), tee: pt(h.geometry[0]), len: Math.round(h.geometry.slice(1).reduce((m, p, i) => m + metres(pt(h.geometry[i]), pt(p)), 0)), green: slim(green) };
+  const si = /^\d+$/.test(h.tags.handicap || '') ? parseInt(h.tags.handicap, 10) : null;
+  out.get(course.id)[ref] = { ...(par >= 3 && par <= 6 ? { par } : {}), ...(si >= 1 && si <= 18 ? { si } : {}), tee: pt(h.geometry[0]), len: Math.round(h.geometry.slice(1).reduce((m, p, i) => m + metres(pt(h.geometry[i]), pt(p)), 0)), green: slim(green) };
 }
 
 for (const c of courses) {
@@ -158,6 +160,9 @@ for (const g of groups) {
   // saved courses and rounds that point at them keep their distances.
   g.sort((a, b) => Object.keys(out.get(b.id)).length - Object.keys(out.get(a.id)).length);
   const h = Object.assign({}, ...g.map((c) => out.get(c.id)));
+  // A stroke index used twice means the map data is wrong somewhere: drop them all rather than guess.
+  const sis = Object.values(h).map((x) => x.si).filter(Boolean);
+  if (new Set(sis).size !== sis.length) Object.values(h).forEach((x) => delete x.si);
   const greensCount = Object.keys(h).length;
   const [lat, lon] = centre(g.map((c) => c.mid));
   index.push({ id: g[0].id, name: g[0].name, lat: round(lat), lon: round(lon), greens: greensCount });

@@ -7,9 +7,10 @@ import { fill } from './storage.js';
 
 // Firestore layout
 //   rounds/{id}                 { ownerId, memberIds[], memberNames{uid:name}, claims{uid:player},
-//                                 code, course, courseRef?, pars[], format, players[], scores{}, done, date }
+//                                 code, course, courseRef?, pars[], si[]?, hcps[]?, format, players[], scores{}, done, date }
+// si = stroke index per hole (null where unknown), hcps = playing handicap per player (0 = none).
 //   codes/{CODE}                { roundId, ownerId }   so mates can find a round by its join code
-//   users/{uid}/courses/{id}    { name, pars[], courseRef? }
+//   users/{uid}/courses/{id}    { name, pars[], si[]?, courseRef? }
 // courseRef is the course's id on the South African course list (public/courses), for distances.
 //   greens/{courseKey}/holes/{n} { lat, lon, by, byName, at }   a green a player saved by standing on it,
 //                                 shared with everyone who plays that course (see greenKey)
@@ -38,7 +39,8 @@ function toRound(id, d, ui, pending = false) {
   const by = d.players.map((_, p) => d.pars.map((__, h) => (cell(p, h) ? { uid: cell(p, h).by, name: cell(p, h).byName } : null)));
   return {
     id, ownerId: d.ownerId, code: d.code || null, claims: d.claims || {}, memberNames: d.memberNames || {},
-    course: d.course, courseRef: d.courseRef || null, pars: d.pars, format: d.format, players: d.players,
+    course: d.course, courseRef: d.courseRef || null, pars: d.pars, si: d.si || null, hcps: d.hcps || null,
+    format: d.format, players: d.players,
     scores, by, pending, done: !!d.done, date: d.date,
     hole: Math.min(ui?.hole ?? 0, d.pars.length - 1), cheered: ui?.cheered || {},
   };
@@ -70,7 +72,7 @@ function scoreEntries(scores, user) {
 const queued = (promise) => { promise.catch((err) => console.error('save', err)); };
 
 export function saveCourse(uid, course) {
-  queued(setDoc(doc(db, 'users', uid, 'courses', course.id), { name: course.name, pars: course.pars, courseRef: course.courseRef || null }));
+  queued(setDoc(doc(db, 'users', uid, 'courses', course.id), { name: course.name, pars: course.pars, si: course.si || null, courseRef: course.courseRef || null }));
 }
 
 // Only takes it off your saved courses: rounds played there and saved greens stay.
@@ -93,7 +95,8 @@ export function createRound(user, r) {
   const batch = writeBatch(db);
   batch.set(doc(db, 'rounds', r.id), {
     ownerId: user.uid, memberIds: [user.uid], memberNames: { [user.uid]: user.name }, claims: r.claims,
-    code: r.code, course: r.course, courseRef: r.courseRef || null, pars: r.pars, format: r.format,
+    code: r.code, course: r.course, courseRef: r.courseRef || null, pars: r.pars, si: r.si || null, hcps: r.hcps || null,
+    format: r.format,
     players: r.players, scores: {}, done: false, date: r.date, createdAt: serverTimestamp(),
   });
   batch.set(doc(db, 'codes', r.code), { roundId: r.id, ownerId: user.uid });
