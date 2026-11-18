@@ -196,7 +196,7 @@ export default function HoleMap({ round, hole, par, data, fix, units, canSave, n
     <div className="holemap" role="dialog" aria-label={'Map of hole ' + (hole + 1)}>
       <div ref={box} className="hm-map" />
       <div className="hm-top">
-        <div className="hm-card hm-hole"><span>{round.course}</span><b>Hole {hole + 1}</b><span>Par {par}</span></div>
+        <div className="hm-card hm-hole"><span>{round.course}</span><b>Hole {hole + 1}</b><span>Par {par}{round.si?.[hole] != null && ' · SI ' + round.si[hole]}</span></div>
         {card}
       </div>
       {offline && <p className="hm-banner">The map needs signal. Distances still work on the scores screen.</p>}

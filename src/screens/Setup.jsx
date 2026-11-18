@@ -3,6 +3,17 @@ import Header from '../Header.jsx';
 import { fill } from '../storage.js';
 import { courseIndex, courseHoles, hereOnce, metres } from '../geo.js';
 
+// Each player's playing handicap, remembered by name on this phone so it's there next round.
+const HCPS = 'fore-birdies-hcps';
+const loadHcps = () => { try { return JSON.parse(localStorage.getItem(HCPS)) || {}; } catch (e) { return {}; } };
+function rememberHcps(players, hcps) {
+  const all = loadHcps();
+  players.forEach((p, i) => { if (p.trim()) all[p.trim().toLowerCase()] = hcps[i] || 0; });
+  try { localStorage.setItem(HCPS, JSON.stringify(all)); } catch (e) {}
+}
+// A stroke index typed in: a whole number 1-18, or nothing.
+const siOf = (v) => { const n = parseInt(v, 10); return n >= 1 && n <= 18 ? n : null; };
+
 const X_ICON = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
     <path d="M6 6l12 12M18 6L6 18" />
@@ -17,7 +28,10 @@ const CHIP_X = (
 );
 
 export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse }) {
-  const [d, setD] = useState({ courseId: null, courseRef: null, course: '', pars: fill(18, 4), format: 'stroke', players: [you || 'You', ''] });
+  const [d, setD] = useState(() => ({
+    courseId: null, courseRef: null, course: '', pars: fill(18, 4), si: fill(18, null), format: 'stroke',
+    players: [you || 'You', ''], hcps: [loadHcps()[(you || '').toLowerCase()] || 0, 0],
+  }));
   const [error, setError] = useState('');
   // The South African course list, and the courses near you once you ask.
   const [list, setList] = useState([]);
@@ -27,7 +41,7 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
   const [editing, setEditing] = useState(false);
   // A removed course can't stay picked.
   useEffect(() => {
-    if (d.courseId && !courses.some((c) => c.id === d.courseId)) set({ courseId: null, courseRef: null, course: '', pars: fill(18, 4) });
+    if (d.courseId && !courses.some((c) => c.id === d.courseId)) set({ courseId: null, courseRef: null, course: '', pars: fill(18, 4), si: fill(18, null) });
     if (!courses.length) setEditing(false);
   }, [courses]);
   useEffect(() => { courseIndex().then(setList); }, []);
@@ -40,7 +54,10 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
   }, [d.players.length]);
 
   function setHoles(n) {
-    set({ pars: n === 9 ? d.pars.slice(0, 9) : d.pars.concat(fill(18 - d.pars.length, 4)).slice(0, 18) });
+    set({
+      pars: n === 9 ? d.pars.slice(0, 9) : d.pars.concat(fill(18 - d.pars.length, 4)).slice(0, 18),
+      si: n === 9 ? d.si.slice(0, 9) : d.si.concat(fill(18 - d.si.length, null)).slice(0, 18),
+    });
   }
   function cyclePar(i) {
     const pars = d.pars.slice();
@@ -49,18 +66,28 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
   }
   // Tapping the selected course again clears it, back to a blank 18-hole course.
   function pickCourse(c) {
-    if (d.courseId === c.id) set({ courseId: null, courseRef: null, course: '', pars: fill(18, 4) });
-    else set({ courseId: c.id, courseRef: c.courseRef || null, course: c.name, pars: c.pars.slice() });
+    if (d.courseId === c.id) set({ courseId: null, courseRef: null, course: '', pars: fill(18, 4), si: fill(18, null) });
+    else set({ courseId: c.id, courseRef: c.courseRef || null, course: c.name, pars: c.pars.slice(), si: c.si ? c.si.slice() : fill(c.pars.length, null) });
     setError('');
   }
-  // A course from the list: its pars come from the map where the map has them, hole by hole.
+  // A course from the list: its pars and stroke indexes come from the map where the map has them,
+  // hole by hole.
   function pickListed(c) {
     set({ courseId: null, courseRef: c.id, course: c.name });
     setNear(null);
     setError('');
     courseHoles(c.id).then((holes) => setD((old) => (old.courseRef !== c.id ? old : {
-      ...old, pars: old.pars.map((p, i) => holes[String(i + 1)]?.par ?? p),
+      ...old,
+      pars: old.pars.map((p, i) => holes[String(i + 1)]?.par ?? p),
+      si: old.si.map((x, i) => holes[String(i + 1)]?.si ?? null),
     })));
+  }
+  function setSi(i, v) {
+    const si = d.si.slice(); si[i] = siOf(v); set({ si });
+  }
+  function setHcp(i, v) {
+    const n = parseInt(v, 10);
+    const hcps = d.hcps.slice(); hcps[i] = n >= 0 ? Math.min(54, n) : 0; set({ hcps });
   }
   async function findNear() {
     setFinding(true);
@@ -70,12 +97,25 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
     setNear(list.map((c) => ({ ...c, away: metres(here, [c.lat, c.lon]) }))
       .filter((c) => c.away < 50000).sort((a, b) => a.away - b.away).slice(0, 5));
   }
+  // Typing a name this phone has seen before fills in that player's handicap.
   function setPlayer(i, v) {
-    const players = d.players.slice(); players[i] = v; set({ players });
+    const players = d.players.slice(); players[i] = v;
+    const known = loadHcps()[v.trim().toLowerCase()];
+    const hcps = d.hcps.slice(); if (known != null) hcps[i] = known;
+    set({ players, hcps });
   }
   function teeOff() {
     if (!d.course.trim()) { setError('Add a course name to tee off.'); return; }
     if (!d.players.some((p) => p.trim())) { setError('Add at least one player to tee off.'); return; }
+    // Handicap strokes go on the hardest holes, so every hole needs its own stroke index. Never guessed.
+    if (d.players.some((p, i) => p.trim() && d.hcps[i] > 0)) {
+      const si = d.si.filter((x) => x != null);
+      if (si.length < d.pars.length || new Set(si).size !== si.length) {
+        setError('To use handicaps, add the stroke index for every hole, each number once. It’s on the club’s scorecard.');
+        return;
+      }
+    }
+    rememberHcps(d.players, d.hcps);
     onTeeOff(d);
   }
 
@@ -158,32 +198,54 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
           </div>
         </div>
         <div className="stack">
+          <p style={{ fontWeight: 700 }}>Stroke index</p>
+          <p className="hint">{d.si.every((x) => x != null)
+            ? 'From the scorecard. Used to give handicap strokes on the hardest holes.'
+            : 'Only needed for handicaps: copy it from the club’s scorecard (1 is the hardest hole).'}</p>
+          <div className="pars si">
+            {d.si.map((x, i) => (
+              <label key={i} className="par">
+                <span>{i + 1}</span>
+                <input type="text" inputMode="numeric" maxLength={2} aria-label={'Hole ' + (i + 1) + ' stroke index'}
+                  value={x ?? ''} onChange={(e) => setSi(i, e.target.value)} />
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="stack">
           <p style={{ fontWeight: 700 }}>Format</p>
           <div className="seg" role="group" aria-label="Scoring format">
             <button type="button" aria-pressed={d.format === 'stroke'} onClick={() => set({ format: 'stroke' })}>Stroke play</button>
             <button type="button" aria-pressed={d.format === 'stableford'} onClick={() => set({ format: 'stableford' })}>Stableford</button>
           </div>
           {d.format === 'stableford' && (
-            <p className="hint">Points per hole: 2 for par, 3 for a birdie, 4 for an eagle, 1 for a bogey. Handicaps come in a later version.</p>
+            <p className="hint">Points per hole: 2 for a net par, 3 for a net birdie, 1 for a net bogey, after any handicap strokes on that hole.</p>
           )}
         </div>
         <div className="stack">
           <p style={{ fontWeight: 700 }}>Players</p>
+          <p className="hint">
+            Add each player’s playing handicap for this course, or leave it empty to play off scratch.
+            {d.pars.length === 9 && ' For 9 holes, use the 9-hole playing handicap (about half the 18-hole one).'}
+          </p>
           {d.players.map((name, i) => (
             <div key={i} className="player-row">
               <label className="sr" htmlFor={'pl' + i}>Player {i + 1}</label>
               <input type="text" id={'pl' + i} autoComplete="off" placeholder={'Player ' + (i + 1)} value={name}
                 onChange={(e) => setPlayer(i, e.target.value)} />
+              <input type="text" className="hcp" inputMode="numeric" maxLength={2} placeholder="Hcp"
+                aria-label={'Playing handicap for ' + (name || 'player ' + (i + 1))}
+                value={d.hcps[i] || ''} onChange={(e) => setHcp(i, e.target.value)} />
               {d.players.length > 1 && (
                 <button className="icon-btn" type="button" aria-label={'Remove player ' + (i + 1)}
-                  onClick={() => set({ players: d.players.filter((_, j) => j !== i) })}>
+                  onClick={() => set({ players: d.players.filter((_, j) => j !== i), hcps: d.hcps.filter((_, j) => j !== i) })}>
                   {X_ICON}
                 </button>
               )}
             </div>
           ))}
           {d.players.length < 8 && (
-            <button className="btn btn-ghost" type="button" onClick={() => { focusNew.current = true; set({ players: d.players.concat('') }); }}>Add player</button>
+            <button className="btn btn-ghost" type="button" onClick={() => { focusNew.current = true; set({ players: d.players.concat(''), hcps: d.hcps.concat(0) }); }}>Add player</button>
           )}
         </div>
         {error && <p className="error" role="alert">{error}</p>}
