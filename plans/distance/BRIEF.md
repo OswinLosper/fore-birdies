@@ -21,7 +21,7 @@ Measuring your shot · hazards, bunkers, layups · a satellite map to tap · a p
 ## Decisions and why
 | Decision | Why | Rejected |
 |---|---|---|
-| OSM + player saves | Rough count: ~52 of 595 SA courses in OSM have 18 greens mapped. But a green is only usable when OSM also says which hole it is: the built list has 256 named courses, 28 with numbered greens, 13 with all 18 (18 Nov 2026) | OSM only (most testers see nothing); paid database (monthly cost, needs a server); private saves (everyone re-saves every green) |
+| OSM + player saves | Rough count: ~52 of 595 SA courses in OSM have 18 greens mapped. But a green is only usable when OSM also says which hole it is: the built list has 292 named courses, 62 with numbered greens, 37 with all 18 (rebuilt 18 Nov 2026 from current data; the first build came from a lagging backup server) | OSM only (most testers see nothing); paid database (monthly cost, needs a server); private saves (everyone re-saves every green) |
 | Stand on the green to save | Free, no map service, works offline then syncs | Satellite map tap (map provider, terms, bigger build); kept as a later idea |
 | Course list shipped with the app | The free OSM servers refused three requests in a row on 18 Nov 2026, so the app can't depend on them on the course | Live OSM lookups; typed names only (spelling variants split one course into many) |
 | Newest save wins, signed-in only | Simple, the course corrects itself over time | Averaging saves; first save sticks |
@@ -41,7 +41,7 @@ Measuring your shot · hazards, bunkers, layups · a satellite map to tap · a p
 3. On a real course (Oswin): an OSM-mapped course shows front/middle/back; an unmapped course gets greens saved during the round, and a second phone sees them. Distances match a rangefinder or the yardage markers to within about 5–10 m.
 
 ## Built
-- `scripts/build-courses.mjs` (`npm run courses`) builds `public/courses/` from OSM; rerun now and then to pick up new mapping. The files are cached for offline use (~216 KB).
+- `scripts/build-courses.mjs` (`npm run courses`) builds `public/courses/` from OSM; rerun now and then to pick up new mapping, and check the printed map date (backup servers can lag). It joins a course OSM draws as several same-name areas (Bellville, Strand), and keeps old course ids working when a course is redrawn. The files are cached for offline use (~512 KB).
 - Hole screen: `src/Distance.jsx`; maths in `src/geo.js`; shared saves in `src/data.js` (`greens/{course}/holes/{n}`) and `firestore.rules`.
 - Tested on the fake Firebase with fake GPS: front/middle/back on Glenvista hole 1 (137/150/161 from 150 m), OSM pars filled in, courses near me, save + second phone (guest) sees it, yards, weak fix, too far, next-to-another-green question; 13/13 access-rule checks.
 
