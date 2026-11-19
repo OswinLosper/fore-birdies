@@ -73,7 +73,15 @@ export default function App() {
     const players = kept.map(([p]) => p);
     const hcps = kept.map(([, h]) => h);
     const existing = courses.find((c) => c.name.toLowerCase() === name.toLowerCase());
-    saveCourse(user.uid, { id: existing ? existing.id : uid(), name, pars: d.pars.slice(), si: d.si.some((x) => x != null) ? d.si.slice() : null, courseRef: d.courseRef });
+    // A 9-hole round only updates the front nine of a saved 18-hole course; the back nine stay.
+    const keep = existing && existing.pars.length > d.pars.length ? existing.pars.length : d.pars.length;
+    const pars = d.pars.concat((existing?.pars || []).slice(d.pars.length, keep));
+    const si = d.si.concat((existing?.si || []).slice(d.pars.length, keep));
+    while (si.length < pars.length) si.push(null);
+    saveCourse(user.uid, {
+      id: existing ? existing.id : uid(), name, pars, si: si.some((x) => x != null) ? si : null,
+      courseRef: d.courseRef || existing?.courseRef || null,
+    });
     // The starter is the first player when that's their own name.
     const claims = players[0] === user.name ? { [user.uid]: 0 } : {};
     const r = {
