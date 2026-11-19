@@ -107,19 +107,14 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
   function teeOff() {
     if (!d.course.trim()) { setError('Add a course name to tee off.'); return; }
     if (!d.players.some((p) => p.trim())) { setError('Add at least one player to tee off.'); return; }
-    // Handicap strokes go on the hardest holes, so every hole needs its own stroke index. Never guessed.
-    if (d.players.some((p, i) => p.trim() && d.hcps[i] > 0)) {
-      const si = d.si.filter((x) => x != null);
-      if (si.length < d.pars.length || new Set(si).size !== si.length) {
-        setError('To use handicaps, add the stroke index for every hole, each number once. It’s on the club’s scorecard.');
-        return;
-      }
-    }
     rememberHcps(d.players, d.hcps);
     onTeeOff(d);
   }
 
   const totalPar = d.pars.reduce((a, b) => a + b, 0);
+  const siGiven = d.si.filter((x) => x != null);
+  const siDupe = new Set(siGiven).size !== siGiven.length;
+  const siDone = siGiven.length === d.pars.length && !siDupe;
   const listed = d.courseRef ? list.find((c) => c.id === d.courseRef) : null;
   const q = d.course.trim().toLowerCase();
   const matches = !d.courseRef && !d.courseId && q.length >= 2
@@ -201,7 +196,7 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
           <p style={{ fontWeight: 700 }}>Stroke index</p>
           <p className="hint">{d.si.every((x) => x != null)
             ? 'From the scorecard. Used to give handicap strokes on the hardest holes.'
-            : 'Only needed for handicaps: copy it from the club’s scorecard (1 is the hardest hole).'}</p>
+            : 'Optional. With it, handicap strokes go on the hardest holes (1 is the hardest). It’s on the club’s scorecard.'}</p>
           <div className="pars si">
             {d.si.map((x, i) => (
               <label key={i} className="par">
@@ -248,6 +243,14 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
             <button className="btn btn-ghost" type="button" onClick={() => { focusNew.current = true; set({ players: d.players.concat(''), hcps: d.hcps.concat(0) }); }}>Add player</button>
           )}
         </div>
+        {d.players.some((p, i) => p.trim() && d.hcps[i] > 0) && !siDone && (
+          <p className="hint" role="status">
+            {siDupe ? 'A stroke index is used twice, so ' : 'Without a stroke index on every hole, '}
+            handicap strokes can’t go on particular holes. {d.format === 'stableford'
+              ? 'Stableford points will be without handicaps.'
+              : 'Handicaps come off each player’s total instead.'}
+          </p>
+        )}
         {error && <p className="error" role="alert">{error}</p>}
         <button className="btn btn-primary btn-block" type="button" onClick={teeOff}>Tee off</button>
         <button className="btn-text" type="button" onClick={onCancel}>Cancel</button>

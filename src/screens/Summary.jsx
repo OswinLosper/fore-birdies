@@ -1,5 +1,5 @@
 import Header from '../Header.jsx';
-import { leaderboard, shareText, toPar, stats, fmtDate, hasHcp, received, pts } from '../scoring.js';
+import { leaderboard, shareText, toPar, stats, fmtDate, hasHcp, received, pts, siComplete } from '../scoring.js';
 
 // Only the starter re-opens or deletes a round. Everyone else can go back to scoring
 // (while it's still being played) or leave it.
@@ -16,6 +16,11 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
       <div className="stack">
         <h1>{r.done ? 'Round finished' : 'Leaderboard'}</h1>
         <p className="muted">{r.course}, {fmtDate(r.date)}, {stab ? 'Stableford' : 'stroke play'}{net ? ', with handicaps' : ''}</p>
+        {net && !siComplete(r) && (
+          <p className="hint">{stab
+            ? 'No stroke index on every hole, so these Stableford points are without handicaps.'
+            : 'No stroke index on every hole, so handicaps came off the total.'}</p>
+        )}
         <div className="board">
           {rows.map((x, i) => (
             <div key={x.p} className={'brow' + (i === 0 ? ' first' : '')}>
