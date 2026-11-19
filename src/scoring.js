@@ -55,8 +55,9 @@ export function label(s, par) {
 
 export function totalText(r, p) {
   const st = stats(r, p);
-  if (r.format === 'stableford') return pts(st.pts);
-  if (!st.played) return '–';
+  if (!st.played) return r.format === 'stableford' ? pts(0) : '–';
+  // Stableford still shows the strokes, so you know your actual score too.
+  if (r.format === 'stableford') return pts(st.pts) + ' · ' + st.strokes + ' strokes (' + toPar(st.diff) + ')';
   if (hasHcp(r)) return 'net ' + toPar(st.netDiff) + ' (gross ' + st.strokes + ')';
   return st.strokes + ' (' + toPar(st.diff) + ')';
 }
