@@ -203,3 +203,9 @@ input.code-input{font-family:'Fredoka',system-ui,sans-serif;font-size:28px;lette
 .pars.si .par:focus-within { border-color: var(--focus); }
 .player-row input.hcp { flex: 0 0 64px; width: 64px; text-align: center; }
 .dots { color: var(--green); font-size: 11px; letter-spacing: 1px; margin-left: 6px; vertical-align: middle; }
+
+/* Scorecard: points under each player's strokes, and an edge on the frozen name column */
+th:first-child, td:first-child { z-index: 1; box-shadow: 1px 0 0 var(--line); }
+tr.strokes-row td { border-bottom: 0; }
+tr.pts-row td { color: var(--muted); font-size: 12px; font-weight: 700; padding-top: 0; }
+tr.pts-row td:first-child { font-weight: 700; font-size: 12px; color: var(--muted); }

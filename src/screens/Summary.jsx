@@ -1,5 +1,5 @@
 import Header from '../Header.jsx';
-import { leaderboard, shareText, toPar, stats, fmtDate, hasHcp, received, pts, siComplete } from '../scoring.js';
+import { leaderboard, shareText, toPar, stats, fmtDate, hasHcp, received, pts, siComplete, stablefordPoints } from '../scoring.js';
 
 // Only the starter re-opens or deletes a round. Everyone else can go back to scoring
 // (while it's still being played) or leave it.
@@ -28,7 +28,10 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
               <span className="pname">{x.name}{net && <small className="muted"> ({r.hcps[x.p] || 0})</small>}</span>
               <span className="bscore">
                 {stab ? pts(x.st.pts) : !x.st.played ? '–' : net ? 'net ' + toPar(x.st.netDiff) : toPar(x.st.diff)}
-                <small>{net && !stab ? 'gross ' + x.st.strokes : x.st.strokes + ' strokes'}</small>
+                <small>
+                  {net && !stab ? 'gross ' + x.st.strokes : x.st.strokes + ' strokes'}
+                  {!stab && x.st.played > 0 && ' · ' + pts(x.st.pts)}
+                </small>
               </span>
             </div>
           ))}
@@ -69,8 +72,8 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
                 )}
               </thead>
               <tbody>
-                {r.players.map((name, p) => (
-                  <tr key={p}>
+                {r.players.map((name, p) => [
+                  <tr key={p} className="strokes-row">
                     <td>{name}</td>
                     {r.pars.map((par, i) => {
                       const s = r.scores[p][i];
@@ -82,8 +85,17 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
                       );
                     })}
                     <td>{stats(r, p).strokes}</td>
-                  </tr>
-                ))}
+                  </tr>,
+                  // Stableford points under the strokes, like a club card, in any format.
+                  <tr key={p + 'pts'} className="pts-row">
+                    <td>Points</td>
+                    {r.pars.map((par, i) => {
+                      const s = r.scores[p][i];
+                      return <td key={i}>{s == null ? '' : stablefordPoints(s, par, received(r, p, i))}</td>;
+                    })}
+                    <td>{stats(r, p).pts}</td>
+                  </tr>,
+                ])}
               </tbody>
             </table>
           </div>
