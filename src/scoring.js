@@ -12,13 +12,18 @@ export function stablefordPoints(s, par, extra = 0) {
 }
 
 // Handicaps: r.hcps[p] is each player's playing handicap, r.si[h] each hole's stroke index.
+// Neither is required: without a full stroke index the strokes can't go on particular holes.
 export const hasHcp = (r) => !!r.hcps?.some((x) => x > 0);
+export function siComplete(r) {
+  const si = (r.si || []).filter((x) => x != null);
+  return si.length === r.pars.length && new Set(si).size === si.length;
+}
 
 // Handicap strokes a player gets on a hole: the hardest holes (lowest stroke index among the
 // holes being played) get one first, then round again past the number of holes.
 export function received(r, p, h) {
   const hcp = r.hcps?.[p] || 0;
-  if (!hcp || r.si?.[h] == null) return 0;
+  if (!hcp || !siComplete(r)) return 0;
   const n = r.pars.length;
   const rank = r.si.filter((x) => x != null && x < r.si[h]).length;
   return Math.floor(hcp / n) + (rank < hcp % n ? 1 : 0);
@@ -33,6 +38,9 @@ export function stats(r, p) {
       strokes += s; diff += s - par; net += s - extra - par; pts += stablefordPoints(s, par, extra); played++;
     }
   });
+  // Without a full stroke index, the handicap comes off the total instead, in step with the holes
+  // played (all of it once the round is done). Stableford points then stay gross.
+  if (hasHcp(r) && !siComplete(r)) net = diff - Math.round(((r.hcps[p] || 0) * played) / r.pars.length);
   // netDiff: to par after handicap strokes on the holes played so far.
   return { strokes, diff, pts, played, netDiff: net, netStrokes: strokes - (diff - net) };
 }
