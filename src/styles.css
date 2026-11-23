@@ -284,3 +284,14 @@ tr.pts-row td:first-child { font-weight: 700; font-size: 12px; color: var(--mute
 .prompt{background:var(--green-soft);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .prompt-btns{display:flex;gap:8px}
 .prompt-btns .btn{flex:1;min-height:44px}
+.tile.worse{border:2px solid var(--yellow)}
+.trend b{font-family:'Fredoka',system-ui,sans-serif;font-size:28px;font-weight:600}
+.better{color:var(--green);font-weight:800}
+:root[data-theme="dark"] .better{color:#7FD19E}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .better{color:#7FD19E}}
+.spark{width:100%;height:auto;display:block}
+.spark .ln{fill:none;stroke:var(--green);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.spark .avg{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
+.spark .dot{fill:var(--green)}
+.spark .last{fill:var(--yellow);stroke:var(--green);stroke-width:2}
+.spark text{font-size:12px;font-weight:700;fill:var(--muted)}

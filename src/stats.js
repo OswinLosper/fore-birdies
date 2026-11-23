@@ -74,7 +74,110 @@ export function myStats(rounds, user, period = 'all', now = Date.now()) {
     birdies: kinds.birdie + kinds.eagle,
     eagles: kinds.eagle,
     h2h: headToHead(mine),
+    form: form(full),
+    halves: halves(full),
+    blowups: blowups(mine),
+    streak: streak(mine),
+    mostBirdies: mostBirdies(mine),
+    courses: byCourse(mine),
   };
+}
+
+const where = ({ r }) => ({ course: r.course, date: r.date });
+
+// Your last 10 rounds of 18 holes, oldest first, and the last 5 against your usual
+// (once there are more than 5 to compare with).
+function form(full) {
+  if (full.length < 2) return null;
+  const all = full.map((x) => x.st.strokes);
+  const usual = avg(all);
+  return {
+    last10: full.slice(0, 10).reverse().map((x) => x.st.strokes),
+    usual,
+    last5: full.length > 5 ? avg(all.slice(0, 5)) : null,
+  };
+}
+
+// Front 9 against back 9, averaged over rounds of 18 holes.
+function halves(full) {
+  if (!full.length) return null;
+  const half = (from) => {
+    const strokes = avg(full.map(({ r, p }) => r.scores[p].slice(from, from + 9).reduce((a, b) => a + b, 0)));
+    const par = avg(full.map(({ r }) => r.pars.slice(from, from + 9).reduce((a, b) => a + b, 0)));
+    return { strokes, diff: strokes - par };
+  };
+  return { front: half(0), back: half(9) };
+}
+
+// Triple bogey or worse: how often, and the shots a round they cost over a double bogey.
+function blowups(mine) {
+  let holes = 0, count = 0, extra = 0;
+  mine.forEach(({ r, p }) => r.pars.forEach((par, h) => {
+    const over = r.scores[p][h] - par;
+    holes++;
+    if (over >= 3) { count++; extra += over - 2; }
+  }));
+  return { count, oneIn: count ? Math.round(holes / count) : null, perRound: mine.length ? extra / mine.length : 0 };
+}
+
+// Most holes in a row at par or better, within one round.
+function streak(mine) {
+  let top = null;
+  mine.forEach((x) => {
+    let run = 0;
+    x.r.pars.forEach((par, h) => {
+      run = x.r.scores[x.p][h] <= par ? run + 1 : 0;
+      if (run > 0 && (!top || run > top.holes)) top = { holes: run, ...where(x) };
+    });
+  });
+  return top;
+}
+
+function mostBirdies(mine) {
+  return mine.reduce((top, x) => {
+    const n = x.r.pars.filter((par, h) => x.r.scores[x.p][h] < par).length;
+    return n > 0 && (!top || n > top.birdies) ? { birdies: n, ...where(x) } : top;
+  }, null);
+}
+
+// Each course you've played, most rounds first. Averages and best use 18-hole rounds
+// where there are any, otherwise all of them. Holes are ranked by average strokes to par.
+function byCourse(mine) {
+  const groups = new Map();
+  mine.forEach((x) => {
+    const key = x.r.course.trim().toLowerCase();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(x);
+  });
+  return [...groups.values()].map((list) => {
+    const full = list.filter((x) => x.r.pars.length === 18);
+    const scored = (full.length ? full : list).map((x) => ({ ...x, st: roundStats(x.r, x.p) }));
+    const holes = [];
+    list.forEach(({ r, p }) => r.pars.forEach((par, h) => {
+      holes[h] = holes[h] || { hole: h + 1, par, s: [], d: [] };
+      holes[h].s.push(r.scores[p][h]);
+      holes[h].d.push(r.scores[p][h] - par);
+    }));
+    const ranked = holes.map((x) => ({ hole: x.hole, par: x.par, avg: avg(x.s), diff: avg(x.d) }))
+      .sort((a, b) => a.diff - b.diff || a.hole - b.hole);
+    const birdieHoles = {};
+    list.forEach(({ r, p }) => r.pars.forEach((par, h) => { if (r.scores[p][h] < par) birdieHoles[h + 1] = (birdieHoles[h + 1] || 0) + 1; }));
+    const topBirdie = Object.entries(birdieHoles).sort((a, b) => b[1] - a[1])[0];
+    const bestRound = best(scored, (a, b) => a.st.strokes < b.st.strokes);
+    return {
+      name: list[0].r.course.trim(),
+      rounds: list.length,
+      last: list[0].r.date,
+      holes: full.length ? 18 : scored[0].r.pars.length,
+      avg: avg(scored.map((x) => x.st.strokes)),
+      avgDiff: avg(scored.map((x) => x.st.diff)),
+      best: { strokes: bestRound.st.strokes, date: bestRound.r.date },
+      birdies: Object.values(birdieHoles).reduce((a, b) => a + b, 0),
+      topBirdie: topBirdie && topBirdie[1] > 1 ? { hole: Number(topBirdie[0]), count: topBirdie[1] } : null,
+      bestHoles: ranked.slice(0, 3),
+      worstHoles: ranked.slice(-3).reverse(),
+    };
+  }).sort((a, b) => b.rounds - a.rounds || a.name.localeCompare(b.name));
 }
 
 // The number each player is judged on in a round, lower is better: Stableford points
