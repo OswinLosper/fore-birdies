@@ -1,4 +1,6 @@
 import Header from '../Header.jsx';
+import { GameResults } from '../GameLines.jsx';
+import { gamesText } from '../games.js';
 import { leaderboard, shareText, toPar, stats, fmtDate, hasHcp, received, pts, siComplete, stablefordPoints } from '../scoring.js';
 
 // Only the starter re-opens or deletes a round. Everyone else can go back to scoring
@@ -7,7 +9,7 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
   const stab = r.format === 'stableford';
   const net = hasHcp(r);
   const rows = leaderboard(r);
-  const text = shareText(r);
+  const text = [shareText(r), ...gamesText(r)].join('\n');
   const hasShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   return (
@@ -36,6 +38,7 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
             </div>
           ))}
         </div>
+        <GameResults round={r} />
         <div className="stack">
           {hasShare && (
             <button className="btn btn-accent btn-block" type="button"

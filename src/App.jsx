@@ -89,6 +89,7 @@ export default function App() {
       course: name, courseRef: d.courseRef || null, pars: d.pars.slice(),
       si: d.si.some((x) => x != null) ? d.si.slice() : null, hcps: hcps.some((x) => x > 0) ? hcps : null,
       format: d.format, players,
+      games: Object.keys(d.games).length ? d.games : null, teams: d.teams || null, ctp: {},
       scores: players.map(() => d.pars.map(() => null)), by: players.map(() => d.pars.map(() => null)),
       hole: 0, done: false, date: Date.now(), cheered: {},
     };

@@ -7,8 +7,11 @@ import { fill } from './storage.js';
 
 // Firestore layout
 //   rounds/{id}                 { ownerId, memberIds[], memberNames{uid:name}, claims{uid:player},
-//                                 code, course, courseRef?, pars[], si[]?, hcps[]?, format, players[], scores{}, done, date }
+//                                 code, course, courseRef?, pars[], si[]?, hcps[]?, format, players[], scores{}, done, date,
+//                                 games{}?, team[]?, ctp{}? }
 // si = stroke index per hole (null where unknown), hcps = playing handicap per player (0 = none).
+// games, team, ctp = side games (see games.js). team = each player's better ball team number
+// (Firestore can't store the pairs as nested lists). ctp.{hole} is set by anyone in the round.
 //   codes/{CODE}                { roundId, ownerId }   so mates can find a round by its join code
 //   users/{uid}/courses/{id}    { name, pars[], si[]?, courseRef? }
 // courseRef is the course's id on the South African course list (public/courses), for distances.
@@ -19,6 +22,10 @@ import { fill } from './storage.js';
 // Which hole you're on and which birdies were cheered belong to this phone only (localStorage).
 
 const UI_KEY = 'fore-birdies-ui';
+
+// Better ball pairs [[0, 2], [1, 3]] <-> each player's team number [0, 1, 0, 1].
+const teamNumbers = (teams, n) => (teams ? Array.from({ length: n }, (_, p) => teams.findIndex((t) => t.includes(p))) : null);
+const teamPairs = (team) => (team ? [...new Set(team)].sort((a, b) => a - b).map((t) => team.map((x, p) => (x === t ? p : -1)).filter((p) => p >= 0)) : null);
 const scoreKey = (p, h) => 'p' + p + 'h' + h;
 
 function loadUi() {
@@ -41,6 +48,7 @@ function toRound(id, d, ui, pending = false) {
     id, ownerId: d.ownerId, code: d.code || null, claims: d.claims || {}, memberNames: d.memberNames || {},
     course: d.course, courseRef: d.courseRef || null, pars: d.pars, si: d.si || null, hcps: d.hcps || null,
     format: d.format, players: d.players,
+    games: d.games || null, teams: teamPairs(d.team), ctp: d.ctp || {},
     scores, by, pending, done: !!d.done, date: d.date,
     hole: Math.min(ui?.hole ?? 0, d.pars.length - 1), cheered: ui?.cheered || {},
   };
@@ -96,7 +104,7 @@ export function createRound(user, r) {
   batch.set(doc(db, 'rounds', r.id), {
     ownerId: user.uid, memberIds: [user.uid], memberNames: { [user.uid]: user.name }, claims: r.claims,
     code: r.code, course: r.course, courseRef: r.courseRef || null, pars: r.pars, si: r.si || null, hcps: r.hcps || null,
-    format: r.format,
+    format: r.format, games: r.games || null, team: teamNumbers(r.teams, r.players.length), ctp: {},
     players: r.players, scores: {}, done: false, date: r.date, createdAt: serverTimestamp(),
   });
   batch.set(doc(db, 'codes', r.code), { roundId: r.id, ownerId: user.uid });
@@ -145,6 +153,10 @@ export function saveRoundChanges(user, before, after) {
     }
   }));
   if (Object.keys(patch).length) after.pending = true;
+  // Closest to the pin, one hole at a time so two phones setting different holes don't clash.
+  Object.keys(after.ctp || {}).forEach((h) => {
+    if (after.ctp[h] !== before.ctp?.[h]) patch['ctp.' + h] = after.ctp[h];
+  });
   if (after.done !== before.done) patch.done = after.done;
   if (Object.keys(patch).length) queued(updateDoc(doc(db, 'rounds', after.id), patch));
   if (after.hole !== before.hole || after.cheered !== before.cheered) {

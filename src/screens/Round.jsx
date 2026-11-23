@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Header from '../Header.jsx';
 import CodeBar from '../CodeBar.jsx';
 import Distance from '../Distance.jsx';
+import GameLines from '../GameLines.jsx';
 import { label, totalText, holeDone, stablefordPoints, received, pts } from '../scoring.js';
 
 // A score of null means "not entered yet". It shows as par, but is only saved when the
@@ -86,6 +87,7 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
           );
         })}
       </div>
+      <GameLines round={r} hole={h} onCtp={(p) => onChange((x) => { x.ctp = { ...x.ctp, [h]: p }; })} />
       <div className="nav">
         <button className="btn btn-ghost" type="button" disabled={h === 0} onClick={() => goTo(h - 1)}>Back</button>
         <button className="btn btn-primary" type="button" onClick={onNext}>{!last ? 'Next hole' : starter ? 'Finish round' : 'See leaderboard'}</button>

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import Header from '../Header.jsx';
 import { fill } from '../storage.js';
 import { courseIndex, courseHoles, hereOnce, metres } from '../geo.js';
+import { GAMES, GAME_NAMES, unavailable } from '../games.js';
+import GameHelp from '../GameHelp.jsx';
 
 // Each player's playing handicap, remembered by name on this phone so it's there next round.
 const HCPS = 'fore-birdies-hcps';
@@ -31,7 +33,10 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
   const [d, setD] = useState(() => ({
     courseId: null, courseRef: null, course: '', pars: fill(18, 4), si: fill(18, null), format: 'stroke',
     players: [you || 'You', ''], hcps: [loadHcps()[(you || '').toLowerCase()] || 0, 0],
+    // Side games switched on, and each player's better ball team (null = paired in order).
+    games: {}, team: [null, null],
   }));
+  const [help, setHelp] = useState(null);
   const [error, setError] = useState('');
   // The South African course list, and the courses near you once you ask.
   const [list, setList] = useState([]);
@@ -107,14 +112,22 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
   function teeOff() {
     if (!d.course.trim()) { setError('Add a course name to tee off.'); return; }
     if (!d.players.some((p) => p.trim())) { setError('Add at least one player to tee off.'); return; }
+    const games = Object.fromEntries(GAMES.filter((g) => d.games[g] && !unavailable(g, setup)).map((g) => [g, true]));
+    if (games.better && teams.some((t) => t.length !== 2)) { setError('Each better ball team needs two players.'); return; }
     rememberHcps(d.players, d.hcps);
-    onTeeOff(d);
+    onTeeOff({ ...d, games, teams: games.better ? teams : null });
   }
 
   const totalPar = d.pars.reduce((a, b) => a + b, 0);
   const siGiven = d.si.filter((x) => x != null);
   const siDupe = new Set(siGiven).size !== siGiven.length;
   const siDone = siGiven.length === d.pars.length && !siDupe;
+  // Teams are by position among the named players, the same order the round keeps them in.
+  const named = d.players.map((p, i) => (p.trim() ? i : -1)).filter((i) => i >= 0);
+  const setup = { players: named.length, holes: d.pars.length, pars: d.pars };
+  const teamOf = (i) => (d.team[i] != null && d.team[i] < Math.floor(named.length / 2) ? d.team[i] : Math.floor(named.indexOf(i) / 2));
+  const teams = Array.from({ length: Math.floor(named.length / 2) }, (_, t) => named.map((i, k) => (teamOf(i) === t ? k : -1)).filter((k) => k >= 0));
+  function setTeam(i, t) { const team = d.team.slice(); team[i] = t; set({ team }); }
   const listed = d.courseRef ? list.find((c) => c.id === d.courseRef) : null;
   const q = d.course.trim().toLowerCase();
   const matches = !d.courseRef && !d.courseId && q.length >= 2
@@ -233,14 +246,14 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
                 value={d.hcps[i] || ''} onChange={(e) => setHcp(i, e.target.value)} />
               {d.players.length > 1 && (
                 <button className="icon-btn" type="button" aria-label={'Remove player ' + (i + 1)}
-                  onClick={() => set({ players: d.players.filter((_, j) => j !== i), hcps: d.hcps.filter((_, j) => j !== i) })}>
+                  onClick={() => set({ players: d.players.filter((_, j) => j !== i), hcps: d.hcps.filter((_, j) => j !== i), team: d.team.filter((_, j) => j !== i) })}>
                   {X_ICON}
                 </button>
               )}
             </div>
           ))}
           {d.players.length < 8 && (
-            <button className="btn btn-ghost" type="button" onClick={() => { focusNew.current = true; set({ players: d.players.concat(''), hcps: d.hcps.concat(0) }); }}>Add player</button>
+            <button className="btn btn-ghost" type="button" onClick={() => { focusNew.current = true; set({ players: d.players.concat(''), hcps: d.hcps.concat(0), team: d.team.concat(null) }); }}>Add player</button>
           )}
         </div>
         {d.players.some((p, i) => p.trim() && d.hcps[i] > 0) && !siDone && (
@@ -251,6 +264,43 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
               : 'Handicaps come off each player’s total instead.'}
           </p>
         )}
+        <div className="stack">
+          <p style={{ fontWeight: 700 }}>Side games</p>
+          <p className="hint">Optional, on top of the format. The app keeps the count, never money.</p>
+          {GAMES.map((g) => {
+            const why = unavailable(g, setup);
+            return (
+              <div key={g} className="game-row">
+                <button className="chip" type="button" aria-pressed={!why && !!d.games[g]} disabled={!!why}
+                  onClick={() => setD((old) => ({ ...old, games: { ...old.games, [g]: !old.games[g] } }))}>
+                  {GAME_NAMES[g]}
+                </button>
+                <button className="btn-text" type="button" onClick={() => setHelp(g)}>How it works</button>
+                {why && <p className="hint">{why}</p>}
+              </div>
+            );
+          })}
+          {d.games.better && !unavailable('better', setup) && (
+            <div className="stack">
+              <p className="hint">Better ball teams. Players are paired in order; tap a team to move someone.</p>
+              {named.map((i) => (
+                <div key={i} className="team-row">
+                  <span>{d.players[i].trim()}</span>
+                  <div className="chips">
+                    {teams.map((_, t) => (
+                      <button key={t} className="chip" type="button" aria-pressed={teamOf(i) === t}
+                        aria-label={d.players[i].trim() + ' in team ' + (t + 1)} onClick={() => setTeam(i, t)}>
+                        {t + 1}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {teams.some((t) => t.length !== 2) && <p className="hint" role="status">Each team needs two players.</p>}
+            </div>
+          )}
+        </div>
+        {help && <GameHelp game={help} onClose={() => setHelp(null)} />}
         {error && <p className="error" role="alert">{error}</p>}
         <button className="btn btn-primary btn-block" type="button" onClick={teeOff}>Tee off</button>
         <button className="btn-text" type="button" onClick={onCancel}>Cancel</button>
