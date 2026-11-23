@@ -8,7 +8,7 @@ import { label, totalText, holeDone, stablefordPoints, received, pts } from '../
 // A score of null means "not entered yet". It shows as par, but is only saved when the
 // player taps + or -, or when the group moves on with "Next hole" / "Finish round".
 // Jumping around the hole strip never fills in scores.
-export default function Round({ round: r, me, onChange, onNext, onExit, onCancel, onLeave }) {
+export default function Round({ round: r, me, bag, onChange, onNext, onExit, onCancel, onLeave }) {
   const h = r.hole, par = r.pars[h];
   const last = h === r.pars.length - 1;
   const starter = r.ownerId === me.uid;
@@ -45,7 +45,7 @@ export default function Round({ round: r, me, onChange, onNext, onExit, onCancel
       </div>
       {stuck && r.code && <p className="sync" role="status">Saved on this phone. Your mates see it once you have signal.</p>}
       {starter && r.code && <CodeBar round={r} />}
-      <Distance round={r} hole={h} me={me} />
+      <Distance round={r} hole={h} me={me} bag={bag} />
       <nav className="strip" aria-label="Holes">
         {r.pars.map((_, i) => (
           <button key={i} type="button" className={holeDone(r, i) ? 'done' : ''} aria-current={i === h ? 'true' : undefined}

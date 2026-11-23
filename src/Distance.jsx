@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { toGreen, getUnits, setUnits, inUnits, courseHoles, metres, centre } from './geo.js';
 import { greenKey, watchGreens, saveGreen } from './data.js';
+import { pickClub } from './bag.js';
+import BagIcon from './BagIcon.jsx';
 
 // The satellite hole map (and its map library) only downloads when someone opens it.
 // With no signal the download fails, so say so instead of breaking the round screen.
@@ -29,7 +31,7 @@ const SAME_GREEN = 25;
 
 // Greens come from the course list (OpenStreetMap outlines, with front and back) and, for holes
 // the map doesn't have, from players who saved them by standing on them (middle only).
-export default function Distance({ round, hole, me }) {
+export default function Distance({ round, hole, me, bag }) {
   const key = greenKey(round);
   const [mapped, setMapped] = useState(null);
   const [saved, setSaved] = useState({});
@@ -144,11 +146,14 @@ export default function Distance({ round, hole, me }) {
         </p>
       )
       : (
-        <div className="dist-row" aria-label="Distance to the green">
-          {d.front != null && <div><span>Front</span><b>{inUnits(d.front, units)}</b></div>}
-          <div className="mid"><span>Middle</span><b>{inUnits(d.middle, units)}</b></div>
-          {d.back != null && <div><span>Back</span><b>{inUnits(d.back, units)}</b></div>}
-        </div>
+        <>
+          <div className="dist-row" aria-label="Distance to the green">
+            {d.front != null && <div><span>Front</span><b>{inUnits(d.front, units)}</b></div>}
+            <div className="mid"><span>Middle</span><b>{inUnits(d.middle, units)}</b></div>
+            {d.back != null && <div><span>Back</span><b>{inUnits(d.back, units)}</b></div>}
+          </div>
+          <Club pick={pickClub(bag, d.middle)} units={units} />
+        </>
       );
   }
 
@@ -187,5 +192,26 @@ export default function Distance({ round, hole, me }) {
         {fromMap && <>Green © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors.</>}
       </p>
     </section>
+  );
+}
+
+// The club from your golf bag for the distance to the middle of the green.
+function Club({ pick, units }) {
+  if (!pick) return null;
+  const u = units === 'yd' ? 'yd' : 'm';
+  const goes = (c) => 'Your ' + c.name.toLowerCase() + ' goes ' + inUnits(c.m, units) + ' ' + u + '.';
+  const { club, other } = pick;
+  return (
+    <div className="club" aria-label={'Club: ' + club.name}>
+      <BagIcon size={34} />
+      <span>
+        <b>{club.name}</b>
+        <small>
+          {pick.tooFar ? 'Further than any of your clubs go. ' + goes(club)
+            : pick.tooShort ? 'Shorter than your shortest club. ' + goes(club)
+              : goes(club) + (other ? ' ' + goes(other) : '')}
+        </small>
+      </span>
+    </div>
   );
 }

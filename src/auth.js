@@ -13,7 +13,8 @@ export function toUser(u) {
   if (!u) return null;
   if (u.isAnonymous) return { uid: u.uid, name: u.displayName || 'Guest', email: null, guest: true };
   const name = u.displayName || (u.email ? u.email.split('@')[0] : 'You');
-  return { uid: u.uid, name, email: u.email, guest: false };
+  const via = u.providerData.some((p) => p.providerId === 'google.com') ? 'Google' : 'email';
+  return { uid: u.uid, name, email: u.email, via, guest: false };
 }
 
 // Like onAuthStateChanged, but also fires when an account gets its name or a guest becomes
@@ -49,6 +50,14 @@ export async function setGuestName(name) {
   const u = auth.currentUser;
   if (!u?.isAnonymous) return;
   await updateProfile(u, { displayName: name });
+  tell(u);
+}
+
+// The name your mates see. Rounds you already started keep the old one.
+export async function setName(name) {
+  const u = auth.currentUser;
+  if (!u || !name.trim()) return;
+  await updateProfile(u, { displayName: name.trim() });
   tell(u);
 }
 

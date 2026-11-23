@@ -16,6 +16,7 @@ import { fill } from './storage.js';
 //   users/{uid}/courses/{id}    { name, pars[], si[]?, courseRef? }
 //   users/{uid}/mates/{id}      { name, hcp }          people you play with, private to you
 //   users/{uid}/crews/{id}      { name, members[] }    a named group of your mates (mate ids)
+//   users/{uid}/bag/clubs       { driver: { on, m }, ... }   your golf bag (see bag.js)
 // courseRef is the course's id on the South African course list (public/courses), for distances.
 //   greens/{courseKey}/holes/{n} { lat, lon, by, byName, at }   a green a player saved by standing on it,
 //                                 shared with everyone who plays that course (see greenKey)
@@ -81,6 +82,15 @@ export function watchCrews(uid, onCrews) {
   return onSnapshot(collection(db, 'users', uid, 'crews'), (snap) => {
     onCrews(snap.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => a.name.localeCompare(b.name)));
   }, (err) => console.error('crews', err));
+}
+
+export function watchBag(uid, onBag) {
+  return onSnapshot(doc(db, 'users', uid, 'bag', 'clubs'), (snap) => onBag(snap.data() || {}),
+    (err) => console.error('bag', err));
+}
+
+export function saveClub(uid, key, club) {
+  queued(setDoc(doc(db, 'users', uid, 'bag', 'clubs'), { [key]: club }, { merge: true }));
 }
 
 function scoreEntries(scores, user) {
