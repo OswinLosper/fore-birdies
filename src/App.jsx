@@ -3,7 +3,7 @@ import { watchUser, finishLinkSignIn, logOut } from './auth.js';
 import { load, uid } from './storage.js';
 import {
   watchRounds, watchCourses, saveCourse, deleteCourse, newRoundId, newCode, createRound, saveRoundChanges, deleteRoundDoc,
-  importLocal, saveUi, leaveRound,
+  importLocal, saveUi, leaveRound, watchMates, watchCrews, saveMate, newId, setInCrew,
 } from './data.js';
 import Home from './screens/Home.jsx';
 import Setup from './screens/Setup.jsx';
@@ -12,6 +12,7 @@ import Summary from './screens/Summary.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Join from './screens/Join.jsx';
 import Stats from './screens/Stats.jsx';
+import Mates from './screens/Mates.jsx';
 import Tabs from './Tabs.jsx';
 import Celebrate from './Celebrate.jsx';
 import Confirm from './Confirm.jsx';
@@ -28,6 +29,8 @@ export default function App() {
   const [user, setUser] = useState(undefined);
   const [rounds, setRounds] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [mates, setMates] = useState([]);
+  const [crews, setCrews] = useState([]);
   // Latest rounds, so callbacks that run later (after the birdie screen) never work on a stale copy.
   const roundsRef = useRef(rounds);
   const [joinCode] = useState(codeFromLink);
@@ -43,13 +46,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setRounds([]); setCourses([]); roundsRef.current = []; return undefined; }
+    if (!user) { setRounds([]); setCourses([]); setMates([]); setCrews([]); roundsRef.current = []; return undefined; }
     const stopRounds = watchRounds(user.uid, (rs) => { roundsRef.current = rs; setRounds(rs); });
     if (user.guest) return stopRounds;
     // Guests have no saved courses and nothing to import.
     importLocal(user, load());
     const stopCourses = watchCourses(user.uid, setCourses);
-    return () => { stopRounds(); stopCourses(); };
+    const stopMates = watchMates(user.uid, setMates);
+    const stopCrews = watchCrews(user.uid, setCrews);
+    return () => { stopRounds(); stopCourses(); stopMates(); stopCrews(); };
   }, [user?.uid, user?.guest]);
 
   const round = roundId ? rounds.find((r) => r.id === roundId) : null;
@@ -96,7 +101,9 @@ export default function App() {
       hole: 0, done: false, date: Date.now(), cheered: {},
     };
     createRound(user, r);
-    saveUi(r.id, { hole: 0, cheered: {} });
+    d.newMates.forEach((m) => saveMate(user.uid, { id: newId(user.uid, 'mates'), ...m }));
+    saveUi(r.id, { hole: 0, cheered: {}, crew: d.crew });
+    r.crew = d.crew;
     roundsRef.current = [...roundsRef.current, r];
     setRounds(roundsRef.current);
     setRoundId(r.id);
@@ -166,6 +173,13 @@ export default function App() {
     });
   }
 
+  // From the end of a round: a player you typed in becomes one of your mates, and maybe joins the crew.
+  function addMate(m, crewId) {
+    const id = newId(user.uid, 'mates');
+    saveMate(user.uid, { id, name: m.name, hcp: m.hcp });
+    if (crewId) setInCrew(user.uid, crewId, id, true);
+  }
+
   function openJoined(id) {
     setRoundId(id);
     go('round');
@@ -192,7 +206,8 @@ export default function App() {
   } else if (view === 'upgrade' && user.guest) {
     screen = <SignIn upgrade guestName={user.name} onCancel={() => go('home')} />;
   } else if (view === 'setup' && !user.guest) {
-    screen = <Setup courses={courses} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')} onRemoveCourse={removeCourse} />;
+    screen = <Setup courses={courses} mates={mates} crews={crews} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')}
+      onRemoveCourse={removeCourse} onMates={() => go('mates')} />;
   } else if (view === 'round' && round) {
     screen = <Round round={round} me={user} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')}
       onCancel={cancelRound} onLeave={leaveNow} />;
@@ -201,6 +216,10 @@ export default function App() {
       <Summary
         round={round}
         starter={starter}
+        user={user}
+        mates={mates}
+        crews={crews}
+        onAddMate={addMate}
         onEdit={() => { updateRound((r) => { r.done = false; r.hole = 0; }); go('round'); }}
         onBack={() => go('round')}
         onDone={() => go('home')}
@@ -208,6 +227,8 @@ export default function App() {
         onLeave={leaveNow}
       />
     );
+  } else if (view === 'mates' && !user.guest) {
+    screen = <Mates user={user} mates={mates} crews={crews} onAsk={setAsking} />;
   } else if (view === 'stats') {
     screen = <Stats rounds={rounds} user={user} />;
   } else {
@@ -225,13 +246,13 @@ export default function App() {
     );
   }
 
-  // The tab bar is only on the two main screens, never while scoring or setting up.
-  const tabs = !!user && (view === 'stats' || screen.type === Home);
+  // The tab bar is only on the main screens, never while scoring or setting up.
+  const tabs = !!user && (screen.type === Stats || screen.type === Mates || screen.type === Home);
 
   return (
     <>
       <main className={'wrap' + (tabs ? ' with-tabs' : '')} aria-live="polite">{screen}</main>
-      {tabs && <Tabs view={view === 'stats' ? 'stats' : 'home'} onGo={go} />}
+      {tabs && <Tabs view={screen.type === Home ? 'home' : view} guest={user.guest} onGo={go} />}
       {celebration && (
         <Celebrate
           {...celebration}

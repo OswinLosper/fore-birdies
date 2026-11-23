@@ -13,6 +13,14 @@ service cloud.firestore {
       allow read, write: if hasAccount() && request.auth.uid == uid;
     }
 
+    // So are your mates and crews.
+    match /users/{uid}/mates/{mateId} {
+      allow read, write: if hasAccount() && request.auth.uid == uid;
+    }
+    match /users/{uid}/crews/{crewId} {
+      allow read, write: if hasAccount() && request.auth.uid == uid;
+    }
+
     // Join codes: codes/{CODE} -> { roundId, ownerId }. Anyone signed in (guests too) can look
     // up one code they typed, but nobody can list them. Creating fails if the code is taken.
     match /codes/{code} {

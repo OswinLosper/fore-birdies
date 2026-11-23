@@ -14,6 +14,8 @@ import { fill } from './storage.js';
 // (Firestore can't store the pairs as nested lists). ctp.{hole} is set by anyone in the round.
 //   codes/{CODE}                { roundId, ownerId }   so mates can find a round by its join code
 //   users/{uid}/courses/{id}    { name, pars[], si[]?, courseRef? }
+//   users/{uid}/mates/{id}      { name, hcp }          people you play with, private to you
+//   users/{uid}/crews/{id}      { name, members[] }    a named group of your mates (mate ids)
 // courseRef is the course's id on the South African course list (public/courses), for distances.
 //   greens/{courseKey}/holes/{n} { lat, lon, by, byName, at }   a green a player saved by standing on it,
 //                                 shared with everyone who plays that course (see greenKey)
@@ -51,6 +53,7 @@ function toRound(id, d, ui, pending = false) {
     games: d.games || null, teams: teamPairs(d.team), ctp: d.ctp || {},
     scores, by, pending, done: !!d.done, date: d.date,
     hole: Math.min(ui?.hole ?? 0, d.pars.length - 1), cheered: ui?.cheered || {},
+    crew: ui?.crew || null, askedMates: !!ui?.askedMates,
   };
 }
 
@@ -66,6 +69,18 @@ export function watchCourses(uid, onCourses) {
   return onSnapshot(collection(db, 'users', uid, 'courses'), (snap) => {
     onCourses(snap.docs.map((x) => ({ id: x.id, ...x.data() })));
   }, (err) => console.error('courses', err));
+}
+
+export function watchMates(uid, onMates) {
+  return onSnapshot(collection(db, 'users', uid, 'mates'), (snap) => {
+    onMates(snap.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => a.name.localeCompare(b.name)));
+  }, (err) => console.error('mates', err));
+}
+
+export function watchCrews(uid, onCrews) {
+  return onSnapshot(collection(db, 'users', uid, 'crews'), (snap) => {
+    onCrews(snap.docs.map((x) => ({ id: x.id, ...x.data() })).sort((a, b) => a.name.localeCompare(b.name)));
+  }, (err) => console.error('crews', err));
 }
 
 function scoreEntries(scores, user) {
@@ -86,6 +101,34 @@ export function saveCourse(uid, course) {
 // Only takes it off your saved courses: rounds played there and saved greens stay.
 export function deleteCourse(uid, id) {
   queued(deleteDoc(doc(db, 'users', uid, 'courses', id)));
+}
+
+export const newId = (uid, kind) => doc(collection(db, 'users', uid, kind)).id;
+
+export function saveMate(uid, m) {
+  queued(setDoc(doc(db, 'users', uid, 'mates', m.id), { name: m.name, hcp: m.hcp || 0 }));
+}
+
+// Takes them out of your crews too. Rounds you played with them stay.
+export function deleteMate(uid, id, crews) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'users', uid, 'mates', id));
+  crews.filter((c) => c.members.includes(id)).forEach((c) => batch.update(doc(db, 'users', uid, 'crews', c.id), { members: arrayRemove(id) }));
+  queued(batch.commit());
+}
+
+export function saveCrew(uid, c) {
+  queued(setDoc(doc(db, 'users', uid, 'crews', c.id), { name: c.name, members: c.members }));
+}
+
+// One mate in or out of one crew.
+export function setInCrew(uid, crewId, mateId, on) {
+  queued(updateDoc(doc(db, 'users', uid, 'crews', crewId), { members: on ? arrayUnion(mateId) : arrayRemove(mateId) }));
+}
+
+// The mates stay.
+export function deleteCrew(uid, id) {
+  queued(deleteDoc(doc(db, 'users', uid, 'crews', id)));
 }
 
 export function newRoundId() {
