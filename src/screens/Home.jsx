@@ -2,9 +2,13 @@ import Header from '../Header.jsx';
 import InstallTip from '../InstallTip.jsx';
 import mascot from '../assets/mascot.svg';
 import { totalText, fmtDate } from '../scoring.js';
+import { myStats } from '../stats.js';
 
-export default function Home({ rounds, user, onNew, onJoin, onOpen, onUpgrade, onSignOut }) {
+export default function Home({ rounds, user, onNew, onJoin, onOpen, onStats, onUpgrade, onSignOut }) {
   const sorted = rounds.slice().sort((a, b) => b.date - a.date);
+  // Your numbers in the banner, once you've finished a round. Tapping them opens Stats.
+  const s = myStats(rounds, user);
+  const avg = s.avg18 ?? s.avg9;
   return (
     <>
       <Header />
@@ -17,6 +21,14 @@ export default function Home({ rounds, user, onNew, onJoin, onOpen, onUpgrade, o
         {user.guest
           ? <button className="btn btn-accent" type="button" onClick={onJoin}>Join a round</button>
           : <button className="btn btn-accent" type="button" onClick={onNew}>Start a round</button>}
+        {s.rounds > 0 && (
+          <button className="strip" type="button" onClick={onStats} aria-label="Your stats">
+            <span><b>{s.rounds}</b>{s.rounds === 1 ? 'round' : 'rounds'}</span>
+            <span><b>{s.birdies}</b>{s.birdies === 1 ? 'birdie' : 'birdies'}</span>
+            <span><b>{Math.round(avg)}</b>{s.avg18 != null ? 'average' : '9-hole avg'}</span>
+            <span className="go" aria-hidden="true">›</span>
+          </button>
+        )}
       </section>
       {!user.guest && (
         <button className="btn btn-ghost btn-block" type="button" style={{ marginTop: 12 }} onClick={onJoin}>Join a mate’s round</button>

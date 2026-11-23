@@ -11,6 +11,8 @@ import Round from './screens/Round.jsx';
 import Summary from './screens/Summary.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Join from './screens/Join.jsx';
+import Stats from './screens/Stats.jsx';
+import Tabs from './Tabs.jsx';
 import Celebrate from './Celebrate.jsx';
 import Confirm from './Confirm.jsx';
 
@@ -206,6 +208,8 @@ export default function App() {
         onLeave={leaveNow}
       />
     );
+  } else if (view === 'stats') {
+    screen = <Stats rounds={rounds} user={user} />;
   } else {
     screen = (
       <Home
@@ -215,14 +219,19 @@ export default function App() {
         onJoin={() => go('join')}
         onUpgrade={() => go('upgrade')}
         onOpen={(r) => { setRoundId(r.id); go(r.done ? 'summary' : 'round'); }}
+        onStats={() => go('stats')}
         onSignOut={signOutNow}
       />
     );
   }
 
+  // The tab bar is only on the two main screens, never while scoring or setting up.
+  const tabs = !!user && (view === 'stats' || screen.type === Home);
+
   return (
     <>
-      <main className="wrap" aria-live="polite">{screen}</main>
+      <main className={'wrap' + (tabs ? ' with-tabs' : '')} aria-live="polite">{screen}</main>
+      {tabs && <Tabs view={view === 'stats' ? 'stats' : 'home'} onGo={go} />}
       {celebration && (
         <Celebrate
           {...celebration}
