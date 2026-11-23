@@ -67,3 +67,40 @@ test('head to head: points, net, gross, and the record text', () => {
   assert.equal(recordText(max), 'You 0 – 1');
   assert.ok(lee.rounds.some((x) => x.me === 'net 8'));
 });
+
+test('form: last 10 rounds of 18, oldest first, and last 5 against your usual', () => {
+  const rounds = [90, 92, 94, 96, 98, 100].map((total, i) => round(['Saver'], [[total - 17 * 5, ...Array(17).fill(5)]], { date: NOW - 1000 * (10 - i) }));
+  const f = myStats(rounds, me, 'all', NOW).form;
+  assert.deepEqual(f.last10, [90, 92, 94, 96, 98, 100]);
+  assert.equal(f.usual, 95);
+  assert.equal(f.last5, 96);
+  // Too few rounds of 18 to compare.
+  assert.equal(myStats(rounds.slice(0, 1), me, 'all', NOW).form, null);
+  assert.equal(myStats(rounds.slice(0, 3), me, 'all', NOW).form.last5, null);
+});
+
+test('front 9 against back 9, blow-up holes and streaks', () => {
+  const r = round(['Saver'], [[4, 4, 3, 4, 7, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 9]], { course: 'Bellville' });
+  const s = myStats([r], me, 'all', NOW);
+  assert.deepEqual(s.halves.front, { strokes: 38, diff: 2 });
+  assert.deepEqual(s.halves.back, { strokes: 49, diff: 13 });
+  // Holes 5 (+3) and 18 (+5): one in 9, costing 1 + 3 shots over a double.
+  assert.deepEqual(s.blowups, { count: 2, oneIn: 9, perRound: 4 });
+  assert.equal(s.streak.holes, 4);
+  assert.equal(s.mostBirdies.birdies, 1);
+});
+
+test('by course: rounds, average, best and best and worst holes', () => {
+  const a = round(['Saver'], [[3, 5, 6, 4, 4, 4, 4, 4, 4]], { course: 'Bellville', date: NOW - 2000 });
+  const b = round(['Saver'], [[3, 5, 4, 4, 4, 4, 4, 4, 4]], { course: 'bellville ', date: NOW - 1000 });
+  const c = round(['Saver'], [Array(9).fill(5)], { course: 'Milnerton' });
+  const [bell, miln] = myStats([a, b, c], me, 'all', NOW).courses;
+  assert.equal(bell.name, 'bellville');
+  assert.equal(bell.rounds, 2);
+  assert.equal(bell.avg, 37);
+  assert.equal(bell.best.strokes, 36);
+  assert.deepEqual(bell.topBirdie, { hole: 1, count: 2 });
+  assert.equal(bell.bestHoles[0].hole, 1);
+  assert.deepEqual(bell.worstHoles.map((x) => x.hole), [3, 2, 9]);
+  assert.equal(miln.rounds, 1);
+});
