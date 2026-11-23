@@ -122,16 +122,25 @@ export default function App() {
     setCelebration({ heroes, par, hole: h, then: proceed });
   }
 
+  function removeRound() {
+    deleteRoundDoc(round);
+    roundsRef.current = roundsRef.current.filter((x) => x.id !== roundId);
+    setRounds(roundsRef.current);
+    setRoundId(null);
+    go('home');
+  }
+
   function deleteRound() {
+    setAsking({ title: 'Delete this round?', text: 'This can’t be undone.', yes: 'Delete', then: removeRound });
+  }
+
+  // Calling a round off before the end. Same as deleting it, but said for mid-round.
+  function cancelRound() {
+    const mates = Object.keys(round.memberNames).length > 1;
     setAsking({
-      title: 'Delete this round?', text: 'This can’t be undone.', yes: 'Delete',
-      then: () => {
-        deleteRoundDoc(round);
-        roundsRef.current = roundsRef.current.filter((x) => x.id !== roundId);
-        setRounds(roundsRef.current);
-        setRoundId(null);
-        go('home');
-      },
+      title: 'Cancel this round?',
+      text: (mates ? 'It’s deleted for everyone who joined, scores and all.' : 'It’s deleted, scores and all.') + ' This can’t be undone.',
+      yes: 'Cancel round', no: 'Keep playing', then: removeRound,
     });
   }
 
@@ -183,7 +192,8 @@ export default function App() {
   } else if (view === 'setup' && !user.guest) {
     screen = <Setup courses={courses} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')} onRemoveCourse={removeCourse} />;
   } else if (view === 'round' && round) {
-    screen = <Round round={round} me={user} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')} />;
+    screen = <Round round={round} me={user} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')}
+      onCancel={cancelRound} onLeave={leaveNow} />;
   } else if (view === 'summary' && round) {
     screen = (
       <Summary
