@@ -65,9 +65,10 @@ service cloud.firestore {
         (isOwner()
           && request.resource.data.ownerId == resource.data.ownerId
           && request.resource.data.get('code', null) == resource.data.get('code', null))
-        // Players score, claim their name and set their own name, until the round is finished.
+        // Players score, set closest to the pin, claim their name and set their own name,
+        // until the round is finished.
         || (isMember() && !resource.data.done
-          && changed().hasOnly(['scores', 'claims', 'memberNames'])
+          && changed().hasOnly(['scores', 'ctp', 'claims', 'memberNames'])
           && claimsOk() && namesOk())
         // Joining: add yourself (you only know the round's id if you had the code).
         || (!isMember()

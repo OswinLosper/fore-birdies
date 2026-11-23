@@ -13,10 +13,11 @@
 - [ ] Test distances on a real course, mapped and unmapped, on Android and iPhone
 - [x] Hole map: Esri satellite view, tap for distances, tap to save a green (see `plans/hole-map/BRIEF.md`)
 - [x] Stroke index per hole (from OpenStreetMap or typed in) and playing handicaps: strokes on the hardest holes, net Stableford, net/gross stroke play
+- [x] Side games: skins, Nassau, better ball, closest to the pin (see `plans/side-games/BRIEF.md`)
 
 ## Later ideas
 - Measure my shot; hazards and layups; a satellite map to save greens from
-- Crews, side games (skins, Nassau), bragging stats, reactions
+- Crews, more side games (presses, Wolf, Bingo Bango Bongo), bragging stats, reactions
 - App store versions via Capacitor (Google Play US$25 once, Apple US$99 a year)
 
 ## Out of scope
