@@ -4,6 +4,7 @@ import { fill } from '../storage.js';
 import { courseIndex, courseHoles, hereOnce, metres } from '../geo.js';
 import { GAMES, GAME_NAMES, unavailable } from '../games.js';
 import GameHelp from '../GameHelp.jsx';
+import { sameName, mateNamed, crewMates } from '../mates.js';
 
 // Each player's playing handicap, remembered by name on this phone so it's there next round.
 const HCPS = 'fore-birdies-hcps';
@@ -29,12 +30,14 @@ const CHIP_X = (
   </svg>
 );
 
-export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse }) {
+export default function Setup({ courses, mates, crews, you, onTeeOff, onCancel, onRemoveCourse, onMates }) {
   const [d, setD] = useState(() => ({
     courseId: null, courseRef: null, course: '', pars: fill(18, 4), si: fill(18, null), format: 'stroke',
     players: [you || 'You', ''], hcps: [loadHcps()[(you || '').toLowerCase()] || 0, 0],
     // Side games switched on, and each player's better ball team (null = paired in order).
     games: {}, team: [null, null],
+    // The crew picked last, so the end of the round can offer to add new faces to it.
+    crew: null, saveNew: true,
   }));
   const [help, setHelp] = useState(null);
   const [error, setError] = useState('');
@@ -109,13 +112,53 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
     const hcps = d.hcps.slice(); if (known != null) hcps[i] = known;
     set({ players, hcps });
   }
+  // Mates and crews: tapping adds them to the players with their handicaps, tapping again takes them off.
+  // You (the first row) are never added or taken off.
+  const onCard = (name) => d.players.some((p, i) => i > 0 && sameName(p, name));
+  function addPeople(old, people) {
+    const players = old.players.slice(); const hcps = old.hcps.slice(); const team = old.team.slice();
+    people.forEach((m) => {
+      if (players.some((p, i) => i > 0 && sameName(p, m.name))) return;
+      const empty = players.findIndex((p, i) => i > 0 && !p.trim());
+      if (empty >= 0) { players[empty] = m.name; hcps[empty] = m.hcp || 0; return; }
+      if (players.length < 8) { players.push(m.name); hcps.push(m.hcp || 0); team.push(null); }
+    });
+    return { ...old, players, hcps, team };
+  }
+  function takeOff(old, names) {
+    const keep = old.players.map((p, i) => i === 0 || !names.some((n) => sameName(p, n)));
+    const players = old.players.filter((_, i) => keep[i]);
+    // Always leave an empty row to type someone into.
+    if (players.length === 1) return { ...old, players: [players[0], ''], hcps: [old.hcps[0], 0], team: [null, null] };
+    return { ...old, players, hcps: old.hcps.filter((_, i) => keep[i]), team: old.team.filter((_, i) => keep[i]) };
+  }
+  const yourMates = mates.filter((m) => !sameName(m.name, you || ''));
+  const crewIn = (c) => {
+    const ms = crewMates(c, yourMates);
+    return ms.length > 0 && ms.every((m) => onCard(m.name));
+  };
+  function tapCrew(c) {
+    const ms = crewMates(c, yourMates);
+    if (crewIn(c)) { setD((old) => ({ ...takeOff(old, ms.map((m) => m.name)), crew: old.crew === c.id ? null : old.crew })); return; }
+    setD((old) => ({ ...addPeople(old, ms), crew: c.id }));
+    if (ms.filter((m) => !onCard(m.name)).length > 8 - d.players.filter((p, i) => i === 0 || p.trim()).length) setError('Only 8 players fit on a card, so not everyone in the crew was added.');
+    else setError('');
+  }
+  function tapMate(m) {
+    setD((old) => (onCard(m.name) ? takeOff(old, [m.name]) : addPeople(old, [m])));
+    setError('');
+  }
+  const typedNew = d.players.filter((p, i) => i > 0 && p.trim() && !mateNamed(mates, p) && !sameName(p, you || ''));
+
   function teeOff() {
     if (!d.course.trim()) { setError('Add a course name to tee off.'); return; }
     if (!d.players.some((p) => p.trim())) { setError('Add at least one player to tee off.'); return; }
     const games = Object.fromEntries(GAMES.filter((g) => d.games[g] && !unavailable(g, setup)).map((g) => [g, true]));
     if (games.better && teams.some((t) => t.length !== 2)) { setError('Each better ball team needs two players.'); return; }
     rememberHcps(d.players, d.hcps);
-    onTeeOff({ ...d, games, teams: games.better ? teams : null });
+    const newMates = d.saveNew ? d.players.map((p, i) => ({ name: p.trim(), hcp: d.hcps[i] || 0 }))
+      .filter((m, i) => i > 0 && typedNew.some((p) => sameName(p, m.name))) : [];
+    onTeeOff({ ...d, games, teams: games.better ? teams : null, newMates });
   }
 
   const totalPar = d.pars.reduce((a, b) => a + b, 0);
@@ -232,6 +275,35 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
         </div>
         <div className="stack">
           <p style={{ fontWeight: 700 }}>Players</p>
+          {crews.some((c) => crewMates(c, yourMates).length) && (
+            <>
+              <p className="hint">Your crews · tap to add everyone</p>
+              <div className="chips">
+                {crews.filter((c) => crewMates(c, yourMates).length).map((c) => (
+                  <button key={c.id} className="chip crew" type="button" aria-pressed={crewIn(c)} onClick={() => tapCrew(c)}>
+                    {c.name} <small>{crewMates(c, yourMates).length}</small>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {yourMates.length > 0 ? (
+            <>
+              <div className="row-between">
+                <p className="hint">Your mates · tap to add one</p>
+                <button className="btn-text" type="button" onClick={onMates}>Edit</button>
+              </div>
+              <div className="chips">
+                {yourMates.map((m) => (
+                  <button key={m.id} className="chip" type="button" aria-pressed={onCard(m.name)} onClick={() => tapMate(m)}>
+                    {m.name} <small>{m.hcp || 0}</small>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="hint">Players you add are saved to your mates, so next time you just tap them.</p>
+          )}
           <p className="hint">
             Add each player’s playing handicap for this course, or leave it empty to play off scratch.
             {d.pars.length === 9 && ' For 9 holes, use the 9-hole playing handicap (about half the 18-hole one).'}
@@ -254,6 +326,12 @@ export default function Setup({ courses, you, onTeeOff, onCancel, onRemoveCourse
           ))}
           {d.players.length < 8 && (
             <button className="btn btn-ghost" type="button" onClick={() => { focusNew.current = true; set({ players: d.players.concat(''), hcps: d.hcps.concat(0), team: d.team.concat(null) }); }}>Add player</button>
+          )}
+          {typedNew.length > 0 && (
+            <label className="toggle">
+              <input type="checkbox" checked={d.saveNew} onChange={(e) => set({ saveNew: e.target.checked })} />
+              Save {typedNew.length === 1 ? typedNew[0].trim() : 'new players'} to my mates
+            </label>
           )}
         </div>
         {d.players.some((p, i) => p.trim() && d.hcps[i] > 0) && !siDone && (

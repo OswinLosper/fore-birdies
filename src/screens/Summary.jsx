@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import Header from '../Header.jsx';
+import { saveUi } from '../data.js';
+import { strangers } from '../mates.js';
 import { GameResults } from '../GameLines.jsx';
 import { gamesText } from '../games.js';
 import { leaderboard, shareText, toPar, stats, fmtDate, hasHcp, received, pts, siComplete, stablefordPoints } from '../scoring.js';
 
 // Only the starter re-opens or deletes a round. Everyone else can go back to scoring
 // (while it's still being played) or leave it.
-export default function Summary({ round: r, starter, onEdit, onBack, onDone, onDelete, onLeave }) {
+export default function Summary({ round: r, starter, user, mates, crews, onAddMate, onEdit, onBack, onDone, onDelete, onLeave }) {
   const stab = r.format === 'stableford';
   const net = hasHcp(r);
   const rows = leaderboard(r);
@@ -38,6 +41,7 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
             </div>
           ))}
         </div>
+        {starter && r.done && !user.guest && <NewMates round={r} user={user} mates={mates} crews={crews} onAdd={onAddMate} />}
         <GameResults round={r} />
         <div className="stack">
           {hasShare && (
@@ -119,5 +123,36 @@ export default function Summary({ round: r, starter, onEdit, onBack, onDone, onD
         </p>
       </div>
     </>
+  );
+}
+
+// After a round you started: players you typed in who aren't your mates yet, to add in one tap.
+// If you started from a crew, they can go into that crew too. "Not now" doesn't ask again for this round.
+function NewMates({ round: r, user, mates, crews, onAdd }) {
+  const [asked, setAsked] = useState(r.askedMates);
+  const crew = crews.find((c) => c.id === r.crew);
+  const [toCrew, setToCrew] = useState(true);
+  const people = strangers(r, mates, user);
+  if (asked || !people.length) return null;
+  const one = people.length === 1;
+  function notNow() { saveUi(r.id, { askedMates: true }); setAsked(true); }
+  return (
+    <div className="prompt" role="region" aria-label="Add to your mates">
+      <p><strong>{one ? people[0].name + ' isn’t one of your mates yet.' : people.map((x) => x.name).join(', ') + ' aren’t your mates yet.'}</strong> Add them so next time you just tap {one ? 'their name' : 'their names'}.</p>
+      {crew && (
+        <label className="toggle">
+          <input type="checkbox" checked={toCrew} onChange={(e) => setToCrew(e.target.checked)} />
+          Also add to {crew.name}
+        </label>
+      )}
+      <div className="prompt-btns">
+        {one ? (
+          <button className="btn btn-primary" type="button" onClick={() => onAdd(people[0], crew && toCrew ? crew.id : null)}>Add {people[0].name}</button>
+        ) : (
+          <button className="btn btn-primary" type="button" onClick={() => people.forEach((x) => onAdd(x, crew && toCrew ? crew.id : null))}>Add all {people.length}</button>
+        )}
+        <button className="btn btn-ghost" type="button" onClick={notNow}>Not now</button>
+      </div>
+    </div>
   );
 }
