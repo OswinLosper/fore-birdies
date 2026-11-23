@@ -8,7 +8,7 @@ import { label, totalText, holeDone, stablefordPoints, received, pts } from '../
 // A score of null means "not entered yet". It shows as par, but is only saved when the
 // player taps + or -, or when the group moves on with "Next hole" / "Finish round".
 // Jumping around the hole strip never fills in scores.
-export default function Round({ round: r, me, onChange, onNext, onExit }) {
+export default function Round({ round: r, me, onChange, onNext, onExit, onCancel, onLeave }) {
   const h = r.hole, par = r.pars[h];
   const last = h === r.pars.length - 1;
   const starter = r.ownerId === me.uid;
@@ -94,6 +94,11 @@ export default function Round({ round: r, me, onChange, onNext, onExit }) {
       </div>
       <p style={{ textAlign: 'center', marginTop: 10 }}>
         <button className="btn-text" type="button" onClick={onExit}>Save and exit</button>
+      </p>
+      <p style={{ textAlign: 'center' }}>
+        {starter
+          ? <button className="btn-text" type="button" onClick={onCancel}>Cancel round</button>
+          : <button className="btn-text" type="button" onClick={onLeave}>Leave this round</button>}
       </p>
     </>
   );
