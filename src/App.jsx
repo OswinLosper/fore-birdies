@@ -49,6 +49,14 @@ export default function App() {
     return watchUser(setUser);
   }, []);
 
+  // Fade out the green splash from index.html once we know who you are.
+  useEffect(() => {
+    const splash = document.getElementById('splash');
+    if (user === undefined || !splash) return;
+    splash.classList.add('gone');
+    setTimeout(() => splash.remove(), 300);
+  }, [user]);
+
   useEffect(() => {
     if (!user) { setRounds([]); setCourses([]); setMates([]); setCrews([]); setBag({}); roundsRef.current = []; return undefined; }
     const stopRounds = watchRounds(user.uid, (rs) => { roundsRef.current = rs; setRounds(rs); });

@@ -7,6 +7,7 @@ const root = createRoot(document.getElementById('root'));
 // Without the Firebase keys the app can't start, and Firebase only says so in the console.
 // Say it on screen instead of showing a blank page.
 if (!import.meta.env.VITE_FIREBASE_API_KEY || !import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+  document.getElementById('splash')?.remove();
   root.render(
     <main className="wrap stack">
       <h1>Fore Birdies isn’t set up yet</h1>
