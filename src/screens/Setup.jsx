@@ -4,7 +4,7 @@ import { fill } from '../storage.js';
 import { courseIndex, courseHoles, hereOnce, metres } from '../geo.js';
 import { GAMES, GAME_NAMES, unavailable } from '../games.js';
 import GameHelp from '../GameHelp.jsx';
-import { sameName, mateNamed, crewMates } from '../mates.js';
+import { sameName, mateNamed, crewMates, cardNamesClash } from '../mates.js';
 
 // Each player's playing handicap, remembered by name on this phone so it's there next round.
 const HCPS = 'fore-birdies-hcps';
@@ -153,6 +153,8 @@ export default function Setup({ courses, mates, crews, you, onTeeOff, onCancel, 
   function teeOff() {
     if (!d.course.trim()) { setError('Add a course name to tee off.'); return; }
     if (!d.players.some((p) => p.trim())) { setError('Add at least one player to tee off.'); return; }
+    const clash = cardNamesClash(d.players);
+    if (clash) { setError(clash); return; }
     const games = Object.fromEntries(GAMES.filter((g) => d.games[g] && !unavailable(g, setup)).map((g) => [g, true]));
     if (games.better && teams.some((t) => t.length !== 2)) { setError('Each better ball team needs two players.'); return; }
     rememberHcps(d.players, d.hcps);

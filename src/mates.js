@@ -13,6 +13,14 @@ export function nameTaken(mates, name, you, selfId) {
   return other ? 'You already have a ' + other.name + '. Add something to tell them apart, like ' + name.trim() + ' S.' : '';
 }
 
+// Why a round's card can't tee off with these names, or '' if they're all different.
+// Two players with the same name would count as one in stats.
+export function cardNamesClash(players) {
+  const named = players.map((p) => p.trim()).filter(Boolean);
+  const twice = named.find((p, i) => named.findLastIndex((x) => sameName(x, p)) !== i);
+  return twice ? 'Two players are called ' + twice + '. Add something to tell them apart, like ' + twice + ' S.' : '';
+}
+
 // The crew's members as mates, in the crew's order, skipping any that were removed.
 export const crewMates = (crew, mates) => crew.members.map((id) => mates.find((m) => m.id === id)).filter(Boolean);
 
