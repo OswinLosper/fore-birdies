@@ -3,7 +3,7 @@ import { watchUser, finishLinkSignIn, logOut } from './auth.js';
 import { load, uid } from './storage.js';
 import {
   watchRounds, watchCourses, saveCourse, deleteCourse, newRoundId, newCode, createRound, saveRoundChanges, deleteRoundDoc,
-  importLocal, saveUi, leaveRound, watchMates, watchCrews, saveMate, newId, setInCrew,
+  importLocal, saveUi, leaveRound, watchMates, watchCrews, saveMate, newId, setInCrew, watchBag,
 } from './data.js';
 import Home from './screens/Home.jsx';
 import Setup from './screens/Setup.jsx';
@@ -13,6 +13,9 @@ import SignIn from './screens/SignIn.jsx';
 import Join from './screens/Join.jsx';
 import Stats from './screens/Stats.jsx';
 import Mates from './screens/Mates.jsx';
+import Account from './screens/Account.jsx';
+import Bag from './screens/Bag.jsx';
+import { CLUBS } from './bag.js';
 import Tabs from './Tabs.jsx';
 import Celebrate from './Celebrate.jsx';
 import Confirm from './Confirm.jsx';
@@ -31,6 +34,7 @@ export default function App() {
   const [courses, setCourses] = useState([]);
   const [mates, setMates] = useState([]);
   const [crews, setCrews] = useState([]);
+  const [bag, setBag] = useState({});
   // Latest rounds, so callbacks that run later (after the birdie screen) never work on a stale copy.
   const roundsRef = useRef(rounds);
   const [joinCode] = useState(codeFromLink);
@@ -46,7 +50,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setRounds([]); setCourses([]); setMates([]); setCrews([]); roundsRef.current = []; return undefined; }
+    if (!user) { setRounds([]); setCourses([]); setMates([]); setCrews([]); setBag({}); roundsRef.current = []; return undefined; }
     const stopRounds = watchRounds(user.uid, (rs) => { roundsRef.current = rs; setRounds(rs); });
     if (user.guest) return stopRounds;
     // Guests have no saved courses and nothing to import.
@@ -54,7 +58,8 @@ export default function App() {
     const stopCourses = watchCourses(user.uid, setCourses);
     const stopMates = watchMates(user.uid, setMates);
     const stopCrews = watchCrews(user.uid, setCrews);
-    return () => { stopRounds(); stopCourses(); stopMates(); stopCrews(); };
+    const stopBag = watchBag(user.uid, setBag);
+    return () => { stopRounds(); stopCourses(); stopMates(); stopCrews(); stopBag(); };
   }, [user?.uid, user?.guest]);
 
   const round = roundId ? rounds.find((r) => r.id === roundId) : null;
@@ -209,7 +214,7 @@ export default function App() {
     screen = <Setup courses={courses} mates={mates} crews={crews} you={user.name} onTeeOff={teeOff} onCancel={() => go('home')}
       onRemoveCourse={removeCourse} onMates={() => go('mates')} />;
   } else if (view === 'round' && round) {
-    screen = <Round round={round} me={user} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')}
+    screen = <Round round={round} me={user} bag={bag} onChange={updateRound} onNext={leaveHole} onExit={() => go('home')}
       onCancel={cancelRound} onLeave={leaveNow} />;
   } else if (view === 'summary' && round) {
     screen = (
@@ -227,6 +232,14 @@ export default function App() {
         onLeave={leaveNow}
       />
     );
+  } else if (view === 'account') {
+    screen = (
+      <Account user={user} bagCount={CLUBS.filter(([k]) => bag[k]?.on).length} mates={mates} crews={crews}
+        onBag={() => go('bag')} onMates={() => go('mates')} onUpgrade={() => go('upgrade')} onSignOut={signOutNow}
+        onBack={() => go('home')} />
+    );
+  } else if (view === 'bag' && !user.guest) {
+    screen = <Bag user={user} bag={bag} onBack={() => go('home')} />;
   } else if (view === 'mates' && !user.guest) {
     screen = <Mates user={user} mates={mates} crews={crews} onAsk={setAsking} />;
   } else if (view === 'stats') {
@@ -241,18 +254,19 @@ export default function App() {
         onUpgrade={() => go('upgrade')}
         onOpen={(r) => { setRoundId(r.id); go(r.done ? 'summary' : 'round'); }}
         onStats={() => go('stats')}
-        onSignOut={signOutNow}
+        onMe={() => go('account')}
+        onBag={() => go('bag')}
       />
     );
   }
 
   // The tab bar is only on the main screens, never while scoring or setting up.
-  const tabs = !!user && (screen.type === Stats || screen.type === Mates || screen.type === Home);
+  const tabs = !!user && [Stats, Mates, Home, Account, Bag].includes(screen.type);
 
   return (
     <>
       <main className={'wrap' + (tabs ? ' with-tabs' : '')} aria-live="polite">{screen}</main>
-      {tabs && <Tabs view={screen.type === Home ? 'home' : view} guest={user.guest} onGo={go} />}
+      {tabs && <Tabs view={screen.type === Home || screen.type === Account || screen.type === Bag ? 'home' : view} guest={user.guest} onGo={go} />}
       {celebration && (
         <Celebrate
           {...celebration}

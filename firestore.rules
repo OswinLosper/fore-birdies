@@ -13,11 +13,14 @@ service cloud.firestore {
       allow read, write: if hasAccount() && request.auth.uid == uid;
     }
 
-    // So are your mates and crews.
+    // So are your mates, crews and golf bag.
     match /users/{uid}/mates/{mateId} {
       allow read, write: if hasAccount() && request.auth.uid == uid;
     }
     match /users/{uid}/crews/{crewId} {
+      allow read, write: if hasAccount() && request.auth.uid == uid;
+    }
+    match /users/{uid}/bag/{bagId} {
       allow read, write: if hasAccount() && request.auth.uid == uid;
     }
 

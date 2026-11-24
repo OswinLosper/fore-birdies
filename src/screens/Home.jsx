@@ -1,17 +1,22 @@
 import Header from '../Header.jsx';
 import InstallTip from '../InstallTip.jsx';
 import mascot from '../assets/mascot.svg';
+import BagIcon from '../BagIcon.jsx';
 import { totalText, fmtDate } from '../scoring.js';
 import { myStats } from '../stats.js';
 
-export default function Home({ rounds, user, onNew, onJoin, onOpen, onStats, onUpgrade, onSignOut }) {
+// A round still being played that started in the last 12 hours, so old unfinished rounds don't nag.
+const LIVE = 12 * 60 * 60 * 1000;
+
+export default function Home({ rounds, user, onNew, onJoin, onOpen, onStats, onUpgrade, onMe, onBag }) {
   const sorted = rounds.slice().sort((a, b) => b.date - a.date);
+  const live = sorted.find((r) => !r.done && Date.now() - r.date < LIVE);
   // Your numbers in the banner, once you've finished a round. Tapping them opens Stats.
   const s = myStats(rounds, user);
   const avg = s.avg18 ?? s.avg9;
   return (
     <>
-      <Header />
+      <Header user={user} onMe={onMe} />
       <section className="hero">
         <div className="mascot"><img src={mascot} alt="" /></div>
         <div className="hero-text stack">
@@ -30,8 +35,22 @@ export default function Home({ rounds, user, onNew, onJoin, onOpen, onStats, onU
           </button>
         )}
       </section>
+      {live && (
+        <button className="live" type="button" style={{ marginTop: 12 }} onClick={() => onOpen(live)}>
+          <span><small>Round in progress</small><strong>{live.course} · hole {live.hole + 1}</strong></span>
+          <span className="go">Carry on ›</span>
+        </button>
+      )}
       {!user.guest && (
-        <button className="btn btn-ghost btn-block" type="button" style={{ marginTop: 12 }} onClick={onJoin}>Join a mate’s round</button>
+        <div className="duo" style={{ marginTop: 12 }}>
+          <button type="button" onClick={onBag}><BagIcon />Golf bag</button>
+          <button type="button" onClick={onJoin}>
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            </svg>
+            Join a mate’s round
+          </button>
+        </div>
       )}
       {user.guest && (
         <section className="guest" style={{ marginTop: 14 }}>
@@ -65,10 +84,6 @@ export default function Home({ rounds, user, onNew, onJoin, onOpen, onStats, onU
           </div>
         )}
       </section>
-      <div className="account">
-        <span>{user.guest ? 'Playing as ' + user.name + ' (guest)' : 'Signed in as ' + (user.email || user.name)}</span>
-        <button className="btn-text" type="button" onClick={onSignOut}>Sign out</button>
-      </div>
     </>
   );
 }
