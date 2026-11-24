@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Header from '../Header.jsx';
 import { newId, saveMate, deleteMate, saveCrew, deleteCrew, setInCrew } from '../data.js';
-import { crewMates, initials } from '../mates.js';
+import { crewMates, initials, nameTaken } from '../mates.js';
 
 // The Mates tab: your crews, then your mates. Tapping one opens it to change it.
 // page = null (the lists), { crew: id | 'new' }, { mate: id | 'new' }.
@@ -16,7 +16,7 @@ export default function Mates({ user, mates, crews, onAsk }) {
   }
   if (page?.mate) {
     const mate = mates.find((m) => m.id === page.mate);
-    if (mate || page.mate === 'new') return <MatePage key={page.mate} user={user} mate={mate} crews={crews} onAsk={onAsk} onBack={back} />;
+    if (mate || page.mate === 'new') return <MatePage key={page.mate} user={user} mate={mate} mates={mates} crews={crews} onAsk={onAsk} onBack={back} />;
   }
 
   return (
@@ -136,7 +136,7 @@ function CrewPage({ user, crew, mates, onAsk, onBack }) {
   );
 }
 
-function MatePage({ user, mate, crews, onAsk, onBack }) {
+function MatePage({ user, mate, mates, crews, onAsk, onBack }) {
   const [name, setName] = useState(mate?.name || '');
   const [hcp, setHcp] = useState(mate?.hcp || 0);
   const [inCrews, setInCrews] = useState(() => crews.filter((c) => mate && c.members.includes(mate.id)).map((c) => c.id));
@@ -144,6 +144,8 @@ function MatePage({ user, mate, crews, onAsk, onBack }) {
 
   function save() {
     if (!name.trim()) { setError('Add their name.'); return; }
+    const taken = nameTaken(mates, name, user.name, mate?.id);
+    if (taken) { setError(taken); return; }
     const id = mate?.id || newId(user.uid, 'mates');
     saveMate(user.uid, { id, name: name.trim(), hcp });
     crews.forEach((c) => {

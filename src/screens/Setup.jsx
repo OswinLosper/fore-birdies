@@ -157,7 +157,9 @@ export default function Setup({ courses, mates, crews, you, onTeeOff, onCancel, 
     if (games.better && teams.some((t) => t.length !== 2)) { setError('Each better ball team needs two players.'); return; }
     rememberHcps(d.players, d.hcps);
     const newMates = d.saveNew ? d.players.map((p, i) => ({ name: p.trim(), hcp: d.hcps[i] || 0 }))
-      .filter((m, i) => i > 0 && typedNew.some((p) => sameName(p, m.name))) : [];
+      .filter((m, i, all) => i > 0 && typedNew.some((p) => sameName(p, m.name))
+        // The same new name typed twice is saved once, so you never end up with two Lees.
+        && all.findIndex((x) => sameName(x.name, m.name)) === i) : [];
     onTeeOff({ ...d, games, teams: games.better ? teams : null, newMates });
   }
 

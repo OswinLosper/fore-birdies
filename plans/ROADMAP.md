@@ -18,7 +18,7 @@
 - [x] More stats: your form over the last 10 rounds, front 9 v back 9, blow-up holes, streaks, per-course pages
 - [x] Golf bag: your clubs and distances, and the club for the distance to the green; an Account page from your initials on Home
 - [x] Mates and crews: saved mates with handicaps, named crews, tap a crew to add everyone to a round; a Mates tab
-- [ ] Two mates with the same name (two Lees): tell them apart in head to head and on the card
+- [x] Two mates with the same name (two Lees): a mate can't take a name you already use, so stats never merges two people
 
 ## Later ideas
 - Measure my shot; hazards and layups; a satellite map to save greens from
