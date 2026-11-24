@@ -5,6 +5,14 @@ export const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCas
 
 export const mateNamed = (mates, name) => mates.find((m) => sameName(m.name, name)) || null;
 
+// Why a mate can't have this name, or '' if it's free. Stats tells people apart by name, so
+// two Lees would count as one. The mate being edited (selfId) can keep its own name.
+export function nameTaken(mates, name, you, selfId) {
+  if (you && sameName(name, you)) return 'That’s your name. Add something to tell you apart, like ' + name.trim() + ' S.';
+  const other = mates.find((m) => m.id !== selfId && sameName(m.name, name));
+  return other ? 'You already have a ' + other.name + '. Add something to tell them apart, like ' + name.trim() + ' S.' : '';
+}
+
 // The crew's members as mates, in the crew's order, skipping any that were removed.
 export const crewMates = (crew, mates) => crew.members.map((id) => mates.find((m) => m.id === id)).filter(Boolean);
 

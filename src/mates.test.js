@@ -1,7 +1,7 @@
 // Run with `npm test`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mateNamed, crewMates, initials, strangers } from './mates.js';
+import { mateNamed, crewMates, initials, strangers, nameTaken } from './mates.js';
 
 const mates = [{ id: 'a', name: 'Lee', hcp: 12 }, { id: 'b', name: 'Max', hcp: 9 }];
 
@@ -23,4 +23,13 @@ test('after a round, only players who are not you and not mates are offered', ()
   const user = { uid: 'u1', name: 'Saver' };
   const round = { players: ['Saver', 'Lee', 'Riaan', 'riaan', 'Sam'], hcps: [0, 12, 18, 18, 0], claims: { u1: 0 } };
   assert.deepEqual(strangers(round, mates, user), [{ p: 2, name: 'Riaan', hcp: 18 }, { p: 4, name: 'Sam', hcp: 0 }]);
+});
+
+test('a mate can’t share a name with another mate or with you', () => {
+  assert.match(nameTaken(mates, ' LEE ', 'Saver'), /already have a Lee/);
+  assert.match(nameTaken(mates, 'saver', 'Saver'), /your name/);
+  assert.equal(nameTaken(mates, 'Lee S', 'Saver'), '');
+  // Editing Lee and keeping the name is fine.
+  assert.equal(nameTaken(mates, 'Lee', 'Saver', 'a'), '');
+  assert.match(nameTaken(mates, 'Lee', 'Saver', 'b'), /already have a Lee/);
 });
