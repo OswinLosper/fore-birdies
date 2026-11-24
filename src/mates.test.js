@@ -1,7 +1,7 @@
 // Run with `npm test`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mateNamed, crewMates, initials, strangers, nameTaken } from './mates.js';
+import { mateNamed, crewMates, initials, strangers, nameTaken, cardNamesClash } from './mates.js';
 
 const mates = [{ id: 'a', name: 'Lee', hcp: 12 }, { id: 'b', name: 'Max', hcp: 9 }];
 
@@ -32,4 +32,10 @@ test('a mate can’t share a name with another mate or with you', () => {
   // Editing Lee and keeping the name is fine.
   assert.equal(nameTaken(mates, 'Lee', 'Saver', 'a'), '');
   assert.match(nameTaken(mates, 'Lee', 'Saver', 'b'), /already have a Lee/);
+});
+
+test('a card can’t tee off with two players of the same name', () => {
+  assert.match(cardNamesClash(['Saver', 'Lee', ' lee ']), /Two players are called Lee/);
+  assert.match(cardNamesClash(['Saver', 'saver']), /called Saver/);
+  assert.equal(cardNamesClash(['Saver', 'Lee', 'Lee S', '', '']), '');
 });
