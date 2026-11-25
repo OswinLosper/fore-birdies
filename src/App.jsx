@@ -3,7 +3,7 @@ import { watchUser, finishLinkSignIn, logOut } from './auth.js';
 import { load, uid } from './storage.js';
 import {
   watchRounds, watchCourses, saveCourse, deleteCourse, newRoundId, newCode, createRound, saveRoundChanges, deleteRoundDoc,
-  importLocal, saveUi, leaveRound, watchMates, watchCrews, saveMate, newId, setInCrew, watchBag,
+  importLocal, saveUi, leaveRound, watchMates, watchCrews, saveMate, newId, setInCrew, watchBag, watchPhoto,
 } from './data.js';
 import Home from './screens/Home.jsx';
 import Setup from './screens/Setup.jsx';
@@ -35,6 +35,7 @@ export default function App() {
   const [mates, setMates] = useState([]);
   const [crews, setCrews] = useState([]);
   const [bag, setBag] = useState({});
+  const [photo, setPhoto] = useState(null);
   // Latest rounds, so callbacks that run later (after the birdie screen) never work on a stale copy.
   const roundsRef = useRef(rounds);
   const [joinCode] = useState(codeFromLink);
@@ -58,7 +59,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) { setRounds([]); setCourses([]); setMates([]); setCrews([]); setBag({}); roundsRef.current = []; return undefined; }
+    if (!user) { setRounds([]); setCourses([]); setMates([]); setCrews([]); setBag({}); setPhoto(null); roundsRef.current = []; return undefined; }
     const stopRounds = watchRounds(user.uid, (rs) => { roundsRef.current = rs; setRounds(rs); });
     if (user.guest) return stopRounds;
     // Guests have no saved courses and nothing to import.
@@ -67,7 +68,8 @@ export default function App() {
     const stopMates = watchMates(user.uid, setMates);
     const stopCrews = watchCrews(user.uid, setCrews);
     const stopBag = watchBag(user.uid, setBag);
-    return () => { stopRounds(); stopCourses(); stopMates(); stopCrews(); stopBag(); };
+    const stopPhoto = watchPhoto(user.uid, setPhoto);
+    return () => { stopRounds(); stopCourses(); stopMates(); stopCrews(); stopBag(); stopPhoto(); };
   }, [user?.uid, user?.guest]);
 
   const round = roundId ? rounds.find((r) => r.id === roundId) : null;
@@ -242,7 +244,7 @@ export default function App() {
     );
   } else if (view === 'account') {
     screen = (
-      <Account user={user} bagCount={CLUBS.filter(([k]) => bag[k]?.on).length} mates={mates} crews={crews}
+      <Account user={user} photo={photo} bagCount={CLUBS.filter(([k]) => bag[k]?.on).length} mates={mates} crews={crews}
         onBag={() => go('bag')} onMates={() => go('mates')} onUpgrade={() => go('upgrade')} onSignOut={signOutNow}
         onBack={() => go('home')} />
     );
@@ -257,6 +259,7 @@ export default function App() {
       <Home
         rounds={rounds}
         user={user}
+        photo={photo}
         onNew={() => go('setup')}
         onJoin={() => go('join')}
         onUpgrade={() => go('upgrade')}

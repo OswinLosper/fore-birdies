@@ -17,6 +17,7 @@ import { fill } from './storage.js';
 //   users/{uid}/mates/{id}      { name, hcp }          people you play with, private to you
 //   users/{uid}/crews/{id}      { name, members[] }    a named group of your mates (mate ids)
 //   users/{uid}/bag/clubs       { driver: { on, m }, ... }   your golf bag (see bag.js)
+//   users/{uid}/profile/me      { photo }              your profile photo as a small JPEG (see photo.js), or null
 // courseRef is the course's id on the South African course list (public/courses), for distances.
 //   greens/{courseKey}/holes/{n} { lat, lon, by, byName, at }   a green a player saved by standing on it,
 //                                 shared with everyone who plays that course (see greenKey)
@@ -103,6 +104,16 @@ function scoreEntries(scores, user) {
 
 // Writes never wait for the server: with no signal they queue on the phone and sync later.
 const queued = (promise) => { promise.catch((err) => console.error('save', err)); };
+
+export function watchPhoto(uid, onPhoto) {
+  return onSnapshot(doc(db, 'users', uid, 'profile', 'me'), (snap) => onPhoto(snap.data()?.photo || null),
+    (err) => console.error('photo', err));
+}
+
+// null takes the photo off, back to your initials.
+export function savePhoto(uid, photo) {
+  queued(setDoc(doc(db, 'users', uid, 'profile', 'me'), { photo }, { merge: true }));
+}
 
 export function saveCourse(uid, course) {
   queued(setDoc(doc(db, 'users', uid, 'courses', course.id), { name: course.name, pars: course.pars, si: course.si || null, courseRef: course.courseRef || null }));

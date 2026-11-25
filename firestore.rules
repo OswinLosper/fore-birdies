@@ -23,6 +23,15 @@ service cloud.firestore {
     match /users/{uid}/bag/{bagId} {
       allow read, write: if hasAccount() && request.auth.uid == uid;
     }
+    // Your profile photo: a small JPEG kept as text (about 10 KB), or null for your initials.
+    match /users/{uid}/profile/{docId} {
+      allow read: if hasAccount() && request.auth.uid == uid;
+      allow write: if hasAccount() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['photo'])
+        && (request.resource.data.photo == null
+            || (request.resource.data.photo is string && request.resource.data.photo.size() < 60000
+                && request.resource.data.photo.matches('^data:image/jpeg;base64,.*')));
+    }
 
     // Join codes: codes/{CODE} -> { roundId, ownerId }. Anyone signed in (guests too) can look
     // up one code they typed, but nobody can list them. Creating fails if the code is taken.

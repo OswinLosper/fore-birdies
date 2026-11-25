@@ -8,7 +8,7 @@ import { myStats } from '../stats.js';
 // A round still being played that started in the last 12 hours, so old unfinished rounds don't nag.
 const LIVE = 12 * 60 * 60 * 1000;
 
-export default function Home({ rounds, user, onNew, onJoin, onOpen, onStats, onUpgrade, onMe, onBag }) {
+export default function Home({ rounds, user, photo, onNew, onJoin, onOpen, onStats, onUpgrade, onMe, onBag }) {
   const sorted = rounds.slice().sort((a, b) => b.date - a.date);
   const live = sorted.find((r) => !r.done && Date.now() - r.date < LIVE);
   // Your numbers in the banner, once you've finished a round. Tapping them opens Stats.
@@ -16,7 +16,7 @@ export default function Home({ rounds, user, onNew, onJoin, onOpen, onStats, onU
   const avg = s.avg18 ?? s.avg9;
   return (
     <>
-      <Header user={user} onMe={onMe} />
+      <Header user={user} photo={photo} onMe={onMe} />
       <section className="hero">
         <div className="mascot"><img src={mascot} alt="" /></div>
         <div className="hero-text stack">
